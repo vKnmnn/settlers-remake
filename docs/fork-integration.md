@@ -88,3 +88,64 @@ These are release gates, not claims of current completeness:
 Prioritize startup, crashes and save integrity first, then complete matches and
 AI correctness. Siege weapons, extra spells and other new features can follow
 once the corresponding gameplay and persistence checks exist.
+
+## Original-game investigation (2026-11-18)
+
+Compatibility target: intended gameplay, not intentional reproduction of known
+original bugs. A selectable bug-compatibility mode (for example for speedruns)
+is deferred; no `--buggy` flag is implemented or promised by this work.
+
+Local static analysis succeeded with Ghidra 12.2 and JDK 25. The analyzed
+`S3.EXE` is a 32-bit x86 PE without debug symbols, SHA-256
+`c2977b67f42c12cb03200c3c282d7f38010e353232689137133c591ebefef2a0`.
+Ghidra recognized 20,888 functions, including library code and possible
+analysis artifacts. This is not a recovered original source tree. The separate
+`s3xp.exe` has a different hash and was not analyzed in this pass.
+
+The original executable was not run. Derived C and the Ghidra project remain
+local under `/tmp/settlers-original-analysis/`; they are not repository assets.
+`tools/research/InspectGame.java` is our analysis script. Reproduce against this
+exact binary, adjusting paths and using a fresh project name for another import:
+
+```sh
+mkdir -p /tmp/settlers-original-analysis/projects
+JAVA_HOME=/usr/lib/jvm/java-25-openjdk /opt/ghidra/support/analyzeHeadless \
+  /tmp/settlers-original-analysis/projects settlers3 \
+  -import "$HOME/.local/Siedler3/S3.EXE" \
+  -analysisTimeoutPerFile 240 -max-cpu 2 \
+  -scriptPath tools/research -postScript InspectGame.java \
+  /tmp/settlers-original-analysis/output \
+  006971b8 006a5908 006a5b04 006a6648
+```
+
+String cross-references led to these entry points (addresses are binary-specific):
+
+| Function | Evidence and interpretation |
+| --- | --- |
+| `004e9670` | References `Digger trouble`; worker-state switch includes terrain work. States 5–9 reserve work positions, compare current and target heights, and change height by one subject to neighbor checks. A 31×31 work table must be empty before the building advances from state 1 to 2. |
+| `004dbc50` | References `BuildingDone`; clears the construction-state byte and initializes building-specific state. |
+| `00509980` | References save-section names including `diggertab`; serializes building and terrain-work data. |
+| `0040c6e0` | References `BuildHelp`, but is only a small wrapper; it does not establish marker-rendering behavior. |
+
+These are interpretations of decompiler output, not original symbol names.
+The remake already has height-based worker actions in `DiggerMovable`, including
+reservation, target-height comparisons and repeated work. Terrain leveling is
+therefore **not absent**. Exact timing, terrain constraints and visual-marker
+lifetimes still require narrower comparisons and gameplay observations.
+
+### Confirmed gaps in the current remake
+
+| Priority | Gap | Code evidence |
+| --- | --- | --- |
+| P1 | Siege workshops/units and powder production are absent from the current model. | `EOriginalMapBuildingType` maps catapult, ballista, cannon, powder and great gong entries to null; corresponding building types are absent. `EOriginalMapSettlersType` also lacks mappings for relevant units. |
+| P1 | Original-map garrison counts are discarded. | `OriginalMapFileContentReader` decodes nine soldier counts and passes them to `OriginalMapFileContent.setBuilding`, which ignores the counts. |
+| P1 | Imported rice liquor and mead stacks disappear. | `EOriginalMapStackType` maps both to null; `OriginalMapFileContent.setStack` skips them despite existing `LIQUOR`/`MEAD` materials. This is an import defect, not missing alcohol production. |
+| P1 | Unsupported mission objectives can be silently omitted. | Building-destruction import and `OriginalSinglePlayerWinCondition.checkProduceCondition` skip null-mapped types. Which installed missions are affected needs a data audit. |
+| P2 | Multiplayer-save listing has a stub. | `MapList.getSavedMultiplayerMaps()` returns null. This alone does not prove that every alternative resume path is absent. |
+| P2 | AI rice-economy planning is incomplete. | `PioneerAi` lacks a swamp-target strategy; `WhatToDoAi` leaves rice-farm work-area adjustment as TODO. Human rice farming exists. |
+
+Unverified: production-goal parsing reads overlapping type/amount bytes in
+`OriginalMapFileContentReader`; verify the map format before changing offsets.
+Comments about original beekeeping rules also need independent verification.
+All four civilisations, the spell enum's cases, ferries and cargo ships already
+exist; their correctness cannot be inferred merely from their presence.
