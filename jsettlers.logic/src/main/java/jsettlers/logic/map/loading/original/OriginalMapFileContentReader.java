@@ -546,11 +546,12 @@ class OriginalMapFileContentReader {
 			int pos = filePart.offset;
 
 			// - Number of buildings
+			if (filePart.size < 4) throw new MapLoadException("Truncated buildings section");
 			int buildingsCount = readBEIntFrom(pos);
 			pos += 4;
 
 			// - safety check
-			if ((buildingsCount * 12 > filePart.size) || (buildingsCount < 0)) {
+			if (buildingsCount < 0 || buildingsCount > (filePart.size - 4) / 12) {
 				throw new MapLoadException("wrong number of buildings in map File: " + buildingsCount);
 			}
 
@@ -564,7 +565,7 @@ class OriginalMapFileContentReader {
 				int posY = readBEWordFrom(pos);
 				pos += 2;
 
-				pos++; // not used - maybe a filling byte to make the record 12 Byte (= 3 INTs) long or unknown?!
+				int garrisonMode = readByteFrom(pos++);
 
 				// -----------
 				// - number of soldier in building is saved as 4-Bit (=Nibble):
@@ -587,6 +588,14 @@ class OriginalMapFileContentReader {
 				int countSpear1 = readHighNibbleFrom(pos);
 				int countSpear2 = readLowNibbleFrom(pos);
 				pos++;
+
+				// Mode 0 uses one level-one swordsman; only mode 1 reads the packed counts.
+				// Other modes create no soldiers in the original loader.
+				if (garrisonMode != 1) {
+					countSword1 = garrisonMode == 0 ? 1 : 0;
+					countSword2 = countSword3 = countArcher1 = countArcher2 = countArcher3 = 0;
+					countSpear1 = countSpear2 = countSpear3 = 0;
+				}
 
 				// -------------
 				// - update data
