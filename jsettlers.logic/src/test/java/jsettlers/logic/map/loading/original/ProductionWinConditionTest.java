@@ -10,6 +10,7 @@ import jsettlers.common.player.EWinState;
 import jsettlers.logic.constants.MatchConstants;
 import jsettlers.logic.map.grid.MainGrid;
 import jsettlers.logic.map.loading.original.data.OriginalProduceGoodsWinCondition;
+import jsettlers.logic.map.loading.original.data.EOriginalMapStackType;
 import jsettlers.logic.player.Player;
 import jsettlers.logic.player.PlayerSetting;
 import jsettlers.main.JSettlersGame;
@@ -52,6 +53,23 @@ public class ProductionWinConditionTest {
         condition.timerEvent();
         assertEquals(EWinState.UNDECIDED, player.getWinState());
         player.getProductionStatistic().materialProduced(EMaterialType.STONE);
+        condition.timerEvent();
+        assertEquals(EWinState.WON, player.getWinState());
+    }
+    @Test
+    public void requiresImportedAlcoholGoalsBeforeWinning() {
+        condition.produceGoodsToWin(Set.of(
+                new OriginalProduceGoodsWinCondition(
+                        EOriginalMapStackType.getTypeByInt(33).value, 2),
+                new OriginalProduceGoodsWinCondition(
+                        EOriginalMapStackType.getTypeByInt(34).value, 1)));
+        condition.timerEvent();
+        assertEquals(EWinState.UNDECIDED, player.getWinState());
+        player.getProductionStatistic().materialProduced(EMaterialType.LIQUOR);
+        player.getProductionStatistic().materialProduced(EMaterialType.LIQUOR);
+        condition.timerEvent();
+        assertEquals(EWinState.UNDECIDED, player.getWinState());
+        player.getProductionStatistic().materialProduced(EMaterialType.MEAD);
         condition.timerEvent();
         assertEquals(EWinState.WON, player.getWinState());
     }

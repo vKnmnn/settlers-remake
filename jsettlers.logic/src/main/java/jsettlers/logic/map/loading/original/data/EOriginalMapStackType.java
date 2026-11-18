@@ -57,8 +57,8 @@ public enum EOriginalMapStackType {
 	Schiesspulver(null),
 	unknown(null),
 	SCYTHE(EMaterialType.SCYTHE),
-	Reisschnaps(null),
-	Met(null),
+	Reisschnaps(EMaterialType.LIQUOR),
+	Met(EMaterialType.MEAD),
 	HONEY(EMaterialType.HONEY),
 
 	/**
