@@ -215,7 +215,10 @@ if (findProject(':jsettlers.main.android')) {
 }
 
 
-task release(dependsOn: ['releaseJSettlers', 'releaseDedicatedServer', 'releaseAndroid'])
+task release(dependsOn: ['releaseJSettlers', 'releaseDedicatedServer'])
+if (findProject(':jsettlers.main.android')) {
+    release.dependsOn 'releaseAndroid'
+}
 
 
 task deployToGithub(type: Exec, dependsOn: 'release') {

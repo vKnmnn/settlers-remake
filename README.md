@@ -73,6 +73,20 @@ All the options above can also be specified as command line options. For this, y
 4. Install JSettlers by running the downloaded file.
 
 ## Build instructions and developer's guide
+
+For a desktop build, use JDK 21 and the Gradle wrapper. `-PskipAndroid` also
+works when an Android SDK is installed:
+
+```sh
+./gradlew -PskipAndroid --max-workers=2 release
+./gradlew -PskipAndroid --max-workers=2 test -x :jsettlers.logic:test :jsettlers.logic:unitTest
+./gradlew -PskipAndroid --max-workers=2 :jsettlers.logic:replayValidationIT --tests jsettlers.integration.replay.ReplayValidationIT.testIfSavegameOfSavegameEqualsSavegame
+```
+
+Desktop archives are written to `release/`. The test commands run desktop unit
+tests and a save/load round trip; they do not claim full replay determinism or
+AI balance coverage. See [fork integration notes](docs/fork-integration.md).
+
 The [build instructions](https://github.com/paulwedeck/settlers-remake/wiki/Compiling-using-gradle) and the [developer's guide](https://github.com/paulwedeck/settlers-remake/wiki/Developer's%20Guide) can be found in our wiki.
 
 Building JSettlers requires a JDK 17 or newer (JDK 21 is recommended), because the build uses Gradle 8 and the Android Gradle Plugin 8. The built game still runs with Java 11 or newer.

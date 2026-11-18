@@ -18,7 +18,7 @@ include ':jsettlers.tools'
 // Android projects
 // Android is automatically disabled if SDK is not set.
 def androidFile = new File(rootProject.dir, 'local.properties');
-if (System.env.ANDROID_HOME || androidFile.isFile() && androidFile.text.matches('(?s)^(.*\\n)?\\s*sdk.dir=.*'))  {
+if (!hasProperty('skipAndroid') && (System.env.ANDROID_HOME || androidFile.isFile() && androidFile.text.matches('(?s)^(.*\\n)?\\s*sdk.dir=.*')))  {
 	include ':go.graphics.android'
 	include ':jsettlers.main.android'
 } else {
