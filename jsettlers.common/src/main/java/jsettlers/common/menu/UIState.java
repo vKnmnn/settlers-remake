@@ -15,6 +15,10 @@
 package jsettlers.common.menu;
 
 import java.io.Serializable;
+import java.util.Map;
+import java.util.Set;
+import java.util.HashMap;
+import java.util.LinkedHashSet;
 
 import jsettlers.common.position.ShortPoint2D;
 
@@ -32,6 +36,7 @@ public class UIState implements Serializable {
 	private final float screenCenterY;
 	private final float zoom;
 	private ShortPoint2D startPoint = null;
+	private HashMap<Integer, Set<Integer>> selectionGroups; // absent in older saves
 
 	/**
 	 * Creates a {@link UIState} object for the given pixel position.
@@ -94,5 +99,24 @@ public class UIState implements Serializable {
 	 */
 	public ShortPoint2D getStartPoint() {
 		return startPoint;
+	}
+
+	/** Independent snapshots: later selection changes must not mutate a pending save. */
+	public Map<Integer, Set<Integer>> getSelectionGroups() {
+		return copyGroups(selectionGroups);
+	}
+
+	public void setSelectionGroups(Map<Integer, Set<Integer>> groups) {
+		selectionGroups = copyGroups(groups);
+	}
+
+	private static HashMap<Integer, Set<Integer>> copyGroups(Map<Integer, Set<Integer>> groups) {
+		HashMap<Integer, Set<Integer>> copy = new HashMap<>();
+		if (groups != null) groups.forEach((number, ids) -> {
+			if (number != null && number >= 1 && number <= 9 && ids != null) {
+				copy.put(number, new LinkedHashSet<>(ids));
+			}
+		});
+		return copy;
 	}
 }

@@ -944,6 +944,11 @@ public abstract class Movable implements ILogicMovable, FoWTask {
 		return health;
 	}
 
+	/** Whether the player can currently issue orders to this movable. */
+	public final boolean isPlayerControlled() {
+		return playerControlled;
+	}
+
 	@Override
 	public final boolean isAlive() {
 		return state != EMovableState.DEAD;

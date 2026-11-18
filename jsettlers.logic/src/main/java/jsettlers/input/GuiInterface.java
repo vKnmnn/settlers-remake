@@ -40,6 +40,10 @@ import jsettlers.common.action.MoveToAction;
 import jsettlers.common.action.PointAction;
 import jsettlers.common.action.ScreenChangeAction;
 import jsettlers.common.action.SelectAreaAction;
+import jsettlers.common.action.SelectGroupAction;
+import jsettlers.logic.movable.Movable;
+import jsettlers.logic.movable.MovableManager;
+import jsettlers.logic.movable.interfaces.ILogicMovable;
 import jsettlers.common.action.SetAcceptedStockMaterialAction;
 import jsettlers.common.action.SetBuildingPriorityAction;
 import jsettlers.common.action.SetDockAction;
@@ -227,6 +231,10 @@ public class GuiInterface implements IMapInterfaceListener, ITaskExecutorGuiInte
 
 			case SELECT_AREA:
 				selectArea((SelectAreaAction) action);
+				break;
+
+			case SELECT_GROUP:
+				selectGroup((SelectGroupAction) action);
 				break;
 
 			case DESELECT:
@@ -626,6 +634,24 @@ public class GuiInterface implements IMapInterfaceListener, ITaskExecutorGuiInte
 		return selectedIds;
 	}
 
+	private synchronized void selectGroup(SelectGroupAction action) {
+		SelectionSet selection = new SelectionSet();
+		for (int id : action.getIds()) {
+			ILogicMovable movable = MovableManager.getMovableByID(id);
+			if (!(movable instanceof Movable) || !movable.isAlive()
+					|| movable.getPlayer().getPlayerId() != playerId
+					|| !((Movable) movable).isPlayerControlled()) continue;
+			ShortPoint2D position = movable.getPosition();
+			// Garrisoned units and ferry passengers are alive but absent from the visible grid.
+			if (position == null || !grid.isInBounds(position)
+					|| grid.getMovable(position.x, position.y) != movable) continue;
+			selection.add(movable);
+		}
+		if (selection.isEmpty()) return;
+		setSelection(selection);
+		if (action.isCenter()) showSelection();
+	}
+
 	private void selectArea(SelectAreaAction action) {
 		final SelectionSet selectionSet = new SelectionSet();
 
@@ -753,7 +779,7 @@ public class GuiInterface implements IMapInterfaceListener, ITaskExecutorGuiInte
 	 * @param selection
 	 * 		The selected items. Not null!
 	 */
-	private void setSelection(SelectionSet selection) {
+	private synchronized void setSelection(SelectionSet selection) {
 		currentSelection.setSelected(false);
 
 		selection.setSelected(true);
@@ -770,7 +796,7 @@ public class GuiInterface implements IMapInterfaceListener, ITaskExecutorGuiInte
 		updateSelection(SelectionSet::createFromFilteredSelectionSetUpdatingType);
 	}
 
-	private void updateSelection(BiFunction<SelectionSet, Predicate<ISelectable>, SelectionSet> updateFunction) {
+	private synchronized void updateSelection(BiFunction<SelectionSet, Predicate<ISelectable>, SelectionSet> updateFunction) {
 		if (!currentSelection.isEmpty()) {
 			SelectionSet newSelection = updateFunction.apply(currentSelection, selectable -> selectable.isSelected() && canSelectPlayer(selectable.getPlayer()));
 

@@ -229,6 +229,8 @@ public final class MapContent implements RegionContent, IMapInterfaceListener, A
 	private IInGamePlayer localPlayer;
 
 	private final IntervalTimeRateCalculator gamespeedCalculator;
+	private final SelectionGroups selectionGroups = new SelectionGroups();
+	private volatile ISelectionSet selectedUnits;
 
 	private long getGameTimeNS() {
 		return gameTimeProvider.getGameTime()*1000L*1000L;
@@ -719,7 +721,9 @@ public final class MapContent implements RegionContent, IMapInterfaceListener, A
 			// also set when action was null, to abort drawing.
 			fireActionEvent(event, action);
 		} else if (event instanceof GOKeyEvent) {
-			Optional<Action> actionForKeyboard = Optional.ofNullable(getActionForKeyboard(((GOKeyEvent) event).getKeyCode()));
+			GOKeyEvent key = (GOKeyEvent) event;
+			if (handleGroupKey(key)) return;
+			Optional<Action> actionForKeyboard = Optional.ofNullable(getActionForKeyboard(key.getKeyCode()));
 			actionForKeyboard.ifPresent(action -> 
 				fireActionEvent(event, actionForKeyboard)
 			);
@@ -735,6 +739,10 @@ public final class MapContent implements RegionContent, IMapInterfaceListener, A
 			GOZoomEvent zoomEvent = (GOZoomEvent) event;
 			handleZoom(zoomEvent);
 		}
+	}
+
+	private boolean handleGroupKey(GOKeyEvent key) {
+		return selectionGroups.handleKey(key, () -> selectedUnits, localPlayer.getPlayerId(), this::fireAction);
 	}
 
 	private void handleZoom(GOZoomEvent zoomEvent) {
@@ -1001,6 +1009,7 @@ public final class MapContent implements RegionContent, IMapInterfaceListener, A
 	}
 
 	public void setSelection(ISelectionSet selection) {
+		selectedUnits = selection;
 		controls.displaySelection(selection);
 	}
 
@@ -1103,6 +1112,13 @@ public final class MapContent implements RegionContent, IMapInterfaceListener, A
 
 	@Override
 	public void fireAction(IAction action) {
+		switch (action.getActionType()) {
+			case SELECT_POINT: case SELECT_POINT_TYPE: case SELECT_AREA: case DESELECT: case FILTER_WOUNDED:
+			case NEXT_OF_TYPE: case ABORT: case DESTROY: case BUILD:
+				selectionGroups.selectionChanged();
+				break;
+			default: break;
+		}
 		IAction fire = controls.replaceAction(action);
 		if (fire != null) {
 			getInterfaceConnector().fireAction(fire);
@@ -1130,6 +1146,8 @@ public final class MapContent implements RegionContent, IMapInterfaceListener, A
 			return;
 		}
 
+		selectionGroups.restore(state.getSelectionGroups());
+
 		if (state.getStartPoint() != null) {
 			scrollTo(state.getStartPoint(), false);
 		} else {
@@ -1140,7 +1158,9 @@ public final class MapContent implements RegionContent, IMapInterfaceListener, A
 
 	protected UIState getUIState() {
 		ScreenPosition screen = context.getScreen();
-		return new UIState(screen.getScreenCenterX(), screen.getScreenCenterY(), screen.getZoom());
+		UIState state = new UIState(screen.getScreenCenterX(), screen.getScreenCenterY(), screen.getZoom());
+		state.setSelectionGroups(selectionGroups.snapshot());
+		return state;
 	}
 
 	public MusicManager getMusicManager() {

@@ -295,3 +295,33 @@ use their actual elapsed duration; clock resets cannot produce negative speeds.
 Deterministic tests cover fast-forward followed by normal speed, pause/resume,
 50 ms simulation ticks, delayed rendering and clock resets. The speed setting
 and F12 simulation behavior are unchanged.
+
+### Original numbered selection groups
+
+Desktop now supports **Alt+1..9** to assign the current own controllable units,
+**1..9** to recall them, and the currently selected group's digit again to center
+on its members. There is no double-click time limit. Saving a nonempty selection
+also makes that group current; saving an empty selection leaves existing groups
+intact. Assigning a unit to another group removes it from its previous group.
+Priests, specialists and ships are supported as well as soldiers, subject to the
+remake's existing selection-type rules. The original's fixed 100-ID array limit
+is not imposed on the remake's collections.
+
+Evidence: installed `MANUAL/MILITAER/MILITAER.HTM` and
+`MANUAL/E_TAST/EINLEI_3.HTM`, verified with Ghidra functions `00542660` (recall and
+arithmetic-mean centering), `00542820` (assignment), `005428e0` (exclusive group
+membership) and `00542990` (selection types), in the S3.EXE identified above.
+
+The persistence design is a partial adaptation of szusik's `335b260d78589998d1096d71397b60ca03458882`
+(`save and restore selected settlers groups`), extended with independent deep
+snapshots and desktop keyboard support. IDs live in the local UI state and old
+saves without groups load empty. Recall resolves IDs against the current map,
+rejecting dead, foreign, non-controllable, garrisoned or embarked units. It uses
+local selection actions and does not add network commands. Modifier key presses
+are now preserved by Swing and GLFW without blocking the following digit.
+
+Validation: 100 logic unit tests, 19 graphics tests, four keyboard-event tests,
+and the common-module suite passed (157 existing common cases remain skipped).
+Both the group-specific serialization scenario and the save/load/save integration
+test passed. Desktop release built successfully. No interactive multiplayer
+session or Android build was performed for this change.
