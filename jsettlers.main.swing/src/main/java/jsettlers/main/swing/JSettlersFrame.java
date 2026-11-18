@@ -23,6 +23,7 @@ import java.awt.KeyboardFocusManager;
 import java.awt.event.KeyEvent;
 
 import javax.swing.JFrame;
+import javax.swing.JDialog;
 import javax.swing.SwingUtilities;
 import javax.swing.Timer;
 import javax.swing.WindowConstants;
@@ -34,6 +35,7 @@ import go.graphics.swing.AreaContainer;
 import go.graphics.swing.sound.SwingSoundPlayer;
 
 import jsettlers.common.CommitInfo;
+import jsettlers.graphics.localization.Labels;
 import jsettlers.common.menu.IJoinPhaseMultiplayerGameConnector;
 import jsettlers.common.menu.IMapInterfaceConnector;
 import jsettlers.common.menu.IMultiplayerConnector;
@@ -61,6 +63,9 @@ public class JSettlersFrame extends JFrame {
 	private final SwingSoundPlayer soundPlayer = new SwingSoundPlayer(SettingsManager.getInstance());
 
 	private Timer redrawTimer;
+	private EndgameMonitor endgameMonitor;
+	private JDialog resultDialog;
+	private IStartedGame displayedGame;
 	private boolean fullScreen = false;
 	private AreaContainer areaContainer;
 
@@ -184,7 +189,37 @@ public class JSettlersFrame extends JFrame {
 		setNewContentPane(joinGamePanel);
 	}
 
+	private void closeResultDialog() {
+		if (endgameMonitor != null) {
+			endgameMonitor.stop();
+			endgameMonitor = null;
+		}
+		if (resultDialog != null) {
+			resultDialog.dispose();
+			resultDialog = null;
+		}
+	}
+
+	private void showGameResult(IStartedGame game) {
+		if (game != displayedGame || game.isShutdownFinished()) return;
+		JDialog dialog = new JDialog(this, Labels.getString("stats-panel-title"), false);
+		resultDialog = dialog;
+		EndgameStatsPanel panel = new EndgameStatsPanel(dialog::dispose, () -> {
+			dialog.dispose();
+			game.stopGame();
+		});
+		panel.setGame(game);
+		dialog.setContentPane(panel);
+		dialog.setDefaultCloseOperation(WindowConstants.DISPOSE_ON_CLOSE);
+		dialog.pack();
+		dialog.setLocationRelativeTo(this);
+		dialog.setVisible(true);
+	}
+
 	public void showEndgameStatistics(IStartedGame game) {
+		if (game != displayedGame) return;
+		closeResultDialog();
+		displayedGame = null;
 		if(areaContainer != null) {
 			areaContainer.disposeAll();
 			areaContainer = null;
@@ -196,7 +231,14 @@ public class JSettlersFrame extends JFrame {
 
 	public IMapInterfaceConnector showStartedGame(IStartedGame startedGame) {
 		MapContent content = new MapContent(startedGame, soundPlayer, ETextDrawPosition.DESKTOP);
-		SwingUtilities.invokeLater(() -> setContent(content));
+		SwingUtilities.invokeLater(() -> {
+			closeResultDialog();
+			displayedGame = startedGame;
+			setContent(content);
+			endgameMonitor = new EndgameMonitor(startedGame,
+					this::showGameResult);
+			endgameMonitor.start();
+		});
 		startedGame.setGameExitListener(exitGame -> SwingUtilities.invokeLater(() -> showEndgameStatistics(exitGame)));
 		return content.getInterfaceConnector();
 	}

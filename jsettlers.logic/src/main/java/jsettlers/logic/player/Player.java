@@ -51,7 +51,7 @@ public class Player implements Serializable, IMessenger, IInGamePlayer, IOffersC
 	private final EndgameStatistic	endgameStatistic = new EndgameStatistic(this);
 	private final BedInformation bedInformation = new BedInformation();
 
-	private EWinState winState;
+	private volatile EWinState winState;
 	private ECivilisation civilisation;
 	/**
 	 * Not final to be able to create it for old savegames.

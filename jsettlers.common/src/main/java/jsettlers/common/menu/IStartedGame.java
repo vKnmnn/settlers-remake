@@ -51,6 +51,9 @@ public interface IStartedGame {
 
 	void setGameExitListener(Consumer<IStartedGame> exitListener);
 
+	/** Requests asynchronous shutdown of this local game instance, without using the graphics action queue. */
+	void stopGame();
+
 	boolean isShutdownFinished();
 
 	boolean isMultiplayerGame();

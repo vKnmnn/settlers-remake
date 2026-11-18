@@ -64,6 +64,11 @@ public class FakeMapGame implements IStartedGame {
 	}
 
 	@Override
+	public void stopGame() {
+		// Map previews do not own a running simulation.
+	}
+
+	@Override
 	public boolean isShutdownFinished() {
 		return false;
 	}

@@ -15,16 +15,23 @@
 package jsettlers.main.swing.menu.statspanel;
 
 import java.awt.BorderLayout;
-import java.util.Arrays;
+import java.awt.Dimension;
+import java.awt.Font;
+import java.awt.FlowLayout;
+import java.util.ArrayList;
+import java.util.List;
 
 import javax.swing.JButton;
+import javax.swing.JLabel;
 import javax.swing.JPanel;
+import javax.swing.JScrollPane;
 import javax.swing.JTable;
 import javax.swing.SwingUtilities;
 import javax.swing.table.DefaultTableModel;
 
 import jsettlers.common.menu.IStartedGame;
 import jsettlers.common.player.IEndgameStatistic;
+import jsettlers.common.player.EWinState;
 import jsettlers.common.player.IInGamePlayer;
 import jsettlers.graphics.localization.Labels;
 import jsettlers.main.swing.JSettlersFrame;
@@ -32,57 +39,78 @@ import jsettlers.main.swing.lookandfeel.ELFStyle;
 import jsettlers.main.swing.lookandfeel.components.BackgroundPanel;
 
 public class EndgameStatsPanel extends BackgroundPanel {
-	private JTable statsTable = new JTable();
+	private final JTable statsTable = new JTable();
+	private final JLabel result = new JLabel();
+	private final List<JButton> actionButtons = new ArrayList<>();
 
 	public EndgameStatsPanel(JSettlersFrame settlersFrame) {
-		JPanel mainPane = new JPanel();
-		mainPane.setLayout(new BorderLayout());
-
-		statsTable.setEnabled(false);
-		statsTable.putClientProperty(ELFStyle.KEY, ELFStyle.TABLE);
-		mainPane.add(statsTable, BorderLayout.NORTH);
-
-		JButton exit = new JButton(Labels.getString("stats-panel-exit"));
-		exit.putClientProperty(ELFStyle.KEY, ELFStyle.BUTTON_STONE);
-		exit.addActionListener(actionEvent -> settlersFrame.showMainMenu());
-		mainPane.add(exit, BorderLayout.SOUTH);
-
-		add(mainPane);
-		SwingUtilities.updateComponentTreeUI(this);
+		this(settlersFrame::showMainMenu, null);
 	}
 
-	private static final String[] columns = new String[] {
-			Labels.getString("stats-panel-name"),
-			Labels.getString("stats-panel-team"),
-			Labels.getString("stats-panel-manna"),
-			Labels.getString("stats-panel-gold"),
-			Labels.getString("stats-panel-soldiers"),
-	};
+	/** When leaveGame is supplied, the game is still running behind this result window. */
+	public EndgameStatsPanel(Runnable continueAction, Runnable leaveGame) {
+		setPreferredSize(new Dimension(1000, 480));
+		JPanel mainPane = new JPanel(new BorderLayout(8, 8));
+		mainPane.add(result, BorderLayout.NORTH);
+		statsTable.setRowHeight(26);
+		result.putClientProperty(ELFStyle.KEY, ELFStyle.LABEL_HEADER);
+		statsTable.setPreferredScrollableViewportSize(new Dimension(850, 250));
+		JScrollPane scroll = new JScrollPane(statsTable);
+		scroll.setColumnHeaderView(statsTable.getTableHeader());
+		mainPane.add(scroll, BorderLayout.CENTER);
+
+		JPanel buttons = new JPanel(new FlowLayout(FlowLayout.RIGHT));
+		buttons.add(button(leaveGame == null ? "stats-panel-exit" : "stats-panel-continue", continueAction));
+		if (leaveGame != null) buttons.add(button("game-menu-quit", leaveGame));
+		mainPane.add(buttons, BorderLayout.SOUTH);
+		add(mainPane, BorderLayout.CENTER);
+		SwingUtilities.updateComponentTreeUI(this);
+		statsTable.setFont(new Font(Font.SANS_SERIF, Font.PLAIN, 14));
+	}
+
+	private JButton button(String label, Runnable action) {
+		JButton button = new JButton(Labels.getString(label));
+		actionButtons.add(button);
+		button.putClientProperty(ELFStyle.KEY, ELFStyle.BUTTON_STONE);
+		button.addActionListener(event -> {
+			button.setEnabled(false);
+			action.run();
+		});
+		return button;
+	}
 
 	public void setGame(IStartedGame game) {
-		IInGamePlayer[] players = game.getAllInGamePlayers();
-		String[][] values = new String[players.length+1][];
-		values[0] = columns;
-		for(int i = 0; i != players.length; i++) values[i+1] = getPlayerRow(players[i]);
-
-		statsTable.setModel(new DefaultTableModel(values, columns));
+		for (JButton button : actionButtons) button.setEnabled(true);
+		IInGamePlayer local = game.getInGamePlayer();
+		String outcome = local == null || local.getWinState() == EWinState.UNDECIDED ? Labels.getString("stats-panel-title")
+				: Labels.getString("winstate_" + local.getWinState());
+		int seconds = Math.max(0, game.getGameTimeProvider().getGameTime() / 1000);
+		result.setText(outcome + " — " + Labels.getString("stats-panel-time") + " "
+				+ String.format("%02d:%02d:%02d", seconds / 3600, seconds / 60 % 60, seconds % 60));
+		statsTable.setModel(createModel(game.getAllInGamePlayers()));
+		statsTable.getColumnModel().getColumn(0).setPreferredWidth(250);
+		statsTable.getColumnModel().getColumn(1).setPreferredWidth(45);
+		statsTable.getColumnModel().getColumn(5).setPreferredWidth(160);
 	}
 
-	private String[] getPlayerRow(IInGamePlayer player) {
-		String[] row = new String[5];
-		if(player == null) {
-			Arrays.fill(row, "");
-			return row;
+	static DefaultTableModel createModel(IInGamePlayer[] players) {
+		String[] keys = { "name", "team", "result", "manna", "gold", "soldiers" };
+		String[] columns = new String[keys.length];
+		for (int i = 0; i < keys.length; i++) columns[i] = Labels.getString("stats-panel-" + keys[i]);
+		List<Object[]> rows = new ArrayList<>();
+		if (players != null) for (IInGamePlayer player : players) {
+			if (player == null) continue;
+			IEndgameStatistic stats = player.getEndgameStatistic();
+			rows.add(new Object[] {
+				(player.getPlayerId() + 1) + ": " + stats.getName(),
+				stats.getTeam() + 1,
+				Labels.getString("stats-panel-result-" + player.getWinState()),
+				stats.getAmountOfProducedMana(), stats.getAmountOfProducedGold(), stats.getAmountOfProducedSoldiers()
+			});
 		}
-
-		IEndgameStatistic igs = player.getEndgameStatistic();
-
-		row[0] = igs.getName();
-		row[1] = "" + igs.getTeam();
-		row[2] = "" + igs.getAmountOfProducedMana();
-		row[3] = "" + igs.getAmountOfProducedGold();
-		row[4] = "" + igs.getAmountOfProducedSoldiers();
-
-		return row;
+		return new DefaultTableModel(rows.toArray(new Object[0][]), columns) {
+			@Override
+			public boolean isCellEditable(int row, int column) { return false; }
+		};
 	}
 }
