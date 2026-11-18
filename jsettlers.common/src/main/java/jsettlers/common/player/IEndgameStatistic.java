@@ -19,6 +19,17 @@ package jsettlers.common.player;
  */
 public interface IEndgameStatistic {
 
+	long getScore();
+	long getSettlersCreated();
+	long getBuildingMaterialsUsed();
+	long getFoodConsumed();
+	long getMinedMaterials();
+	long getGoldValue();
+	long getManaProduced();
+	long getSoldiersRecruited();
+	long getBattlePoints();
+	boolean isComplete();
+
 	short getAmountOfProducedSoldiers();
 	short getAmountOfProducedMana();
 	short getAmountOfProducedGold();

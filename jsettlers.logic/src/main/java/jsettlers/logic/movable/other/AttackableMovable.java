@@ -25,10 +25,14 @@ public class AttackableMovable extends Movable implements IAttackableMovable {
 
 	@Override
 	public void receiveHit(float hitStrength, ShortPoint2D attackerPos, IPlayer attackingPlayer) {
+		if (!isAlive()) return;
 		if(hasEffect(EEffectType.SHIELDED)) hitStrength *= EEffectType.SHIELDED_DAMAGE_FACTOR;
 
 		this.health -= hitStrength;
 		if (health <= 0) {
+			if (attackingPlayer instanceof Player && attackingPlayer.getTeamId() != player.getTeamId()) {
+				((Player) attackingPlayer).getEndgameStatistic().recordBattleWon();
+			}
 			this.kill();
 		}
 

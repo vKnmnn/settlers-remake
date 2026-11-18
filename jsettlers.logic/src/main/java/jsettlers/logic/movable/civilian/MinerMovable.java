@@ -7,6 +7,7 @@ import jsettlers.common.movable.EDirection;
 import jsettlers.common.movable.EMovableAction;
 import jsettlers.common.movable.EMovableType;
 import jsettlers.common.position.ShortPoint2D;
+import jsettlers.common.player.ECivilisation;
 import jsettlers.logic.buildings.workers.MineBuilding;
 import jsettlers.logic.movable.Movable;
 import jsettlers.logic.movable.MovableManager;
@@ -64,6 +65,15 @@ public class MinerMovable extends BuildingWorkerMovable {
 
 	private int getMiningInterval() {
 		return (int) (building.getBuildingVariant().getMineSettings().getMiningInterval()*1000);
+	}
+
+	@Override
+	protected void produce(EMaterialType material) {
+		super.produce(material);
+		getPlayer().getEndgameStatistic().recordMinedMaterial();
+		if (material == EMaterialType.GEMS && getPlayer().getCivilisation() == ECivilisation.EGYPTIAN) {
+			getPlayer().getEndgameStatistic().recordGemProduced();
+		}
 	}
 
 	private EDirection getDropDirection() {

@@ -417,6 +417,7 @@ public abstract class Building extends AbstractHexMapObject implements IConstruc
 			IRequestStack stack = getStackWithMaterial();
 			if (stack != null) {
 				stack.pop();
+				getPlayer().getEndgameStatistic().recordBuildingMaterialUsed();
 				remainingMaterialActions = Constants.BRICKLAYER_ACTIONS_PER_MATERIAL;
 				return true;
 			} else {

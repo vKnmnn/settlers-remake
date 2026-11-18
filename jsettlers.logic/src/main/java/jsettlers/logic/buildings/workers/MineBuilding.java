@@ -50,6 +50,7 @@ public final class MineBuilding extends ResourceBuilding {
 
 			for (int i = 0; i < foodOrder.length; i++) { // check the types of food by order
 				if (super.popMaterialFromStack(foodOrder[i])) {
+					getPlayer().getEndgameStatistic().recordFoodConsumed();
 					feedWorkPackages = workPackagesForFoodByOrder[i];
 					break;
 				}

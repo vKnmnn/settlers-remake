@@ -15,6 +15,8 @@
 package jsettlers.logic.player;
 
 import java.io.Serializable;
+import java.io.IOException;
+import java.io.ObjectInputStream;
 
 import jsettlers.common.movable.EMovableType;
 import jsettlers.common.movable.ESoldierType;
@@ -38,6 +40,8 @@ public class MannaInformation implements Serializable, IMannaInformation {
 	private final byte[] levelOfTypes = {0, 0, 0};
 
 	private short[] spellUsedCount                 = new short[ESpellType.values().length];
+	private volatile long lifetimeMannaProduced;
+	private boolean extendedTotal = true;
 	private short   totalManna                     = 0;
 	private short   manna                          = 0;
 	private short   numberOfUpgradesExecuted       = 0;
@@ -49,15 +53,27 @@ public class MannaInformation implements Serializable, IMannaInformation {
 		this.civilisation = civilisation;
 	}
 
+	public long getLifetimeMannaProduced() { return lifetimeMannaProduced; }
+
+	private void readObject(ObjectInputStream input) throws IOException, ClassNotFoundException {
+		input.defaultReadObject();
+		if (!extendedTotal) {
+			lifetimeMannaProduced = Short.toUnsignedInt(totalManna);
+			extendedTotal = true;
+		}
+	}
+
 	public void increaseManna() {
 		manna++;
 		totalManna++;
+		lifetimeMannaProduced++;
 	}
 
 	public void increaseMannaByBigTemple() {
 		if (isMannaIncreasableByBigTemples) {
 			manna += 8;
 			totalManna += 8;
+			lifetimeMannaProduced += 8;
 		}
 	}
 

@@ -59,6 +59,9 @@ public abstract class SpawnBuilding extends Building {
 		if (movableAtDoor == null) {
 			movableAtDoor = Movable.createMovable(getMovableType(), getPlayer(), getDoor(), grid.getMovableGrid());
 			produced++;
+			if (getMovableType() == EMovableType.BEARER || getMovableType() == EMovableType.MAGE) {
+				getPlayer().getEndgameStatistic().recordSettlerCreated();
+			}
 
 			if (produced < getProduceLimit()) {
 				rescheduleDelay = getProducePeriod();
