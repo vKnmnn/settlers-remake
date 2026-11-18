@@ -31,7 +31,7 @@ Integration branch: `integration/fork-improvements`.
 
 JDK 21.0.13.1, Linux. Desktop release and unit tests passed.
 Common: 936 cases, 157 skipped; graphics: 9 passed; network: 74 cases,
-19 skipped; logic: 50 passed (including mage save regression). Save/load/save integration: 1 passed.
+19 skipped; logic: 53 passed (including mage save and marker-cleanup regressions). Save/load/save integration: 1 passed.
 Existing skipped tests are not counted as successful coverage.
 
 Resource initialization with the local original installation completed and
@@ -149,3 +149,27 @@ Unverified: production-goal parsing reads overlapping type/amount bytes in
 Comments about original beekeeping rules also need independent verification.
 All four civilisations, the spell enum's cases, ferries and cargo ships already
 exist; their correctness cannot be inferred merely from their presence.
+
+### Reported interactive issues
+
+- Construction previews at other free positions are expected while the building
+  tool remains active after placement. Right-click (`MOVE_TO`) or abort clears
+  the active tool through `ShowConstructionMarksAction(null)`. This does not
+  explain persistent marks after abort or over already occupied positions.
+  A separate cleanup fix tracks partially calculated areas and clears markers
+  in a `finally` block on cancellation or calculation failure. Regression
+  tests cover partial calculation, cancellation while waiting, and a failed
+  calculation combined with deselection; this is not a full reproduction of
+  every reported visual symptom.
+- Clicking “leave game” sometimes does not respond. **Not reproduced or fixed
+  yet.** Added diagnostics log EXIT before dispatch, the stop request, and each
+  shutdown stage. `Q` uses the same EXIT action and can distinguish mouse/menu
+  handling from downstream shutdown. No active game process remained for a
+  thread dump during this investigation. A suspected music-stop race was
+  rejected by a passing test; no speculative music or save-lock fix was applied.
+
+After integrating exit diagnostics and marker cleanup, all 53 logic unit tests
+and the desktop release build passed. The 9 graphics tests also passed after
+the exit-dispatch logging change. The three marker regression tests pass on
+the combined branch. Interactive confirmation of the reported symptoms is
+still required.
