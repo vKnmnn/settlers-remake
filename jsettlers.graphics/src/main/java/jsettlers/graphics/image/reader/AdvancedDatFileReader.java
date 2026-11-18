@@ -163,20 +163,7 @@ public class AdvancedDatFileReader implements DatFileReader {
 		0x00
 	};
 
-	private static final byte[] FILE_HEADER_END = {
-		0x04,
-		0x19,
-		0x00,
-		0x00,
-		0x0c,
-		0x00,
-		0x00,
-		0x00,
-		0x00,
-		0x00,
-		0x00,
-		0x00
-	};
+	private static final int ID_HEADER_INDEX = 0x1904;
 
 	private static final int SEQUENCE_TYPE_COUNT = 6;
 	private static final int ID_SETTLERS         = 0x106;
@@ -383,6 +370,9 @@ public class AdvancedDatFileReader implements DatFileReader {
 	}
 
 	private int[] readSequenceIndexStarts(long fileLength, ByteReader reader) throws IOException {
+		if (fileLength < 96) {
+			throw new IOException("Dat file is too short to contain its header index.");
+		}
 		reader.assumeToRead(FILE_START1);
 		reader.assumeToRead(type.getFileStartMagic());
 		reader.assumeToRead(FILE_START2);
@@ -404,7 +394,19 @@ public class AdvancedDatFileReader implements DatFileReader {
 
 		// ignore unknown bytes.
 		reader.read32();
-		reader.assumeToRead(FILE_HEADER_END);
+		// This index is empty in most graphics archives, but original files such
+		// as 07/08/09 contain a variable table of pointers here. Its data is not
+		// used by this reader; the supported sequence lists have absolute offsets.
+		long headerIndexStart = reader.getReadBytes();
+		int headerIndexId = reader.read32();
+		int headerIndexLength = reader.read32();
+		int entryCount = reader.read16();
+		int pointersPerEntry = reader.read16();
+		long expectedLength = 12L + 4L * entryCount * pointersPerEntry;
+		if (headerIndexId != ID_HEADER_INDEX || headerIndexLength != expectedLength
+				|| headerIndexStart + expectedLength > fileLength) {
+			throw new IOException("Invalid dat header index type, length or bounds.");
+		}
 		return sequenceIndexStarts;
 	}
 
