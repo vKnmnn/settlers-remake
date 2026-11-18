@@ -16,7 +16,10 @@ Integration branch: `integration/fork-improvements`.
   their protocol/state depends on other changes not imported here.
 - Selected portions of szusik `de811c2b56`: reject missing savegame timers and
   exclude shutdown from saving. The shared lock guards all clearState callers.
-  Android UI and mage changes are not included in this extraction.
+  Android UI changes are not included. The mage restoration fix is ported
+  separately: terrain editors are created on demand after deserialization.
+  A regression test saves a queued irrigation spell, reloads it and verifies
+  that it changes the restored terrain (and leaves the original grid alone).
 - Local tests cover production victory thresholds, fog update exclusion during
   saving, and incomplete savegame rejection. Desktop CI explicitly opts out of
   Android, uploads test reports, and runs a save/load round trip.
@@ -25,7 +28,7 @@ Integration branch: `integration/fork-improvements`.
 
 JDK 21.0.13.1, Linux. Desktop release and unit tests passed.
 Common: 936 cases, 157 skipped; graphics: 2 passed; network: 74 cases,
-19 skipped; logic: 49 passed. Save/load/save integration: 1 passed.
+19 skipped; logic: 50 passed (including mage save regression). Save/load/save integration: 1 passed.
 Existing skipped tests are not counted as successful coverage.
 
 Resource initialization with the local original installation completed and
@@ -41,7 +44,7 @@ sprites render correctly. No full interactive match has been validated yet.
 - Logging path regression tests and complete failure-path startup validation.
 - Additional save failure/concurrent-shutdown tests, atomic file replacement,
   save-version compatibility policy and deterministic replay corpus.
-- szusik multiplayer resume, selection groups and mage restoration fixes;
+- szusik multiplayer resume and selection groups;
   review protocol and save-format dependencies first.
 - TheRealDrNick soldier-order and thief fixes, then naval/colonization AI with
   deterministic runs and balance tests.

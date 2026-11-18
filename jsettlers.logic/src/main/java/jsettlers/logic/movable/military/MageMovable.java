@@ -46,7 +46,10 @@ public class MageMovable extends AttackableHumanMovable implements IMageMovable 
 
 	private static final float ACTION1_DURATION = 1f;
 
-	private transient final LandscapeEditor terraformHandle = new LandscapeEditor(pt -> grid.getLandscapeTypeAt(pt.x, pt.y), (pt, type) -> grid.setLandscape(pt.x, pt.y, type));
+	// Create on demand: transient field initializers do not run when loading a savegame.
+	private LandscapeEditor getTerraformHandle() {
+		return new LandscapeEditor(pt -> grid.getLandscapeTypeAt(pt.x, pt.y), (pt, type) -> grid.setLandscape(pt.x, pt.y, type));
+	}
 
 	private ESpellType nextSpell;
 
@@ -457,10 +460,10 @@ public class MageMovable extends AttackableHumanMovable implements IMageMovable 
 			flattenedRegion = affectedRegion.filter((x, y) -> fromFlatCond.apply(grid.getLandscapeTypeAt(x, y))).toList();
 		}
 
-		terraformHandle.fill(to, affectedRegion.toList());
+		getTerraformHandle().fill(to, affectedRegion.toList());
 
 		if(fromFlatCond != null) {
-			terraformHandle.fill(toFlat, flattenedRegion);
+			getTerraformHandle().fill(toFlat, flattenedRegion);
 		}
 	}
 
