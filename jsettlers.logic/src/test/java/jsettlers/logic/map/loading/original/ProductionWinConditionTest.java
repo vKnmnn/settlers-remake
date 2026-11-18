@@ -11,6 +11,7 @@ import jsettlers.logic.constants.MatchConstants;
 import jsettlers.logic.map.grid.MainGrid;
 import jsettlers.logic.map.loading.original.data.OriginalProduceGoodsWinCondition;
 import jsettlers.logic.map.loading.original.data.EOriginalMapStackType;
+import jsettlers.logic.objects.stack.StackMapObject;
 import jsettlers.logic.player.Player;
 import jsettlers.logic.player.PlayerSetting;
 import jsettlers.main.JSettlersGame;
@@ -25,7 +26,7 @@ public class ProductionWinConditionTest {
     public void setUp() {
         MatchConstants.init(new NetworkTimer(true), 0L);
         grid = new MainGrid("production-test", "Production test", (short) 32, (short) 32,
-                new PlayerSetting[] { new PlayerSetting((byte) 0) });
+                new PlayerSetting[] { new PlayerSetting((byte) 0), new PlayerSetting((byte) 1) });
         player = grid.getPartitionsGrid().getPlayer((byte) 0);
         condition = new OriginalSinglePlayerWinCondition(grid) {
             @Override
@@ -45,14 +46,13 @@ public class ProductionWinConditionTest {
     }
 
     @Test
-    public void requiresEveryProductionGoalBeforeWinning() {
+    public void requiresEveryStockGoalBeforeWinning() {
         condition.timerEvent();
         assertEquals(EWinState.UNDECIDED, player.getWinState());
-        player.getProductionStatistic().materialProduced(EMaterialType.PLANK);
-        player.getProductionStatistic().materialProduced(EMaterialType.PLANK);
+        putStack(8, EMaterialType.PLANK, 2, (byte) 0);
         condition.timerEvent();
         assertEquals(EWinState.UNDECIDED, player.getWinState());
-        player.getProductionStatistic().materialProduced(EMaterialType.STONE);
+        putStack(10, EMaterialType.STONE, 1, (byte) 0);
         condition.timerEvent();
         assertEquals(EWinState.WON, player.getWinState());
     }
@@ -65,12 +65,48 @@ public class ProductionWinConditionTest {
                         EOriginalMapStackType.getTypeByInt(34).value, 1)));
         condition.timerEvent();
         assertEquals(EWinState.UNDECIDED, player.getWinState());
-        player.getProductionStatistic().materialProduced(EMaterialType.LIQUOR);
-        player.getProductionStatistic().materialProduced(EMaterialType.LIQUOR);
+        putStack(8, EMaterialType.LIQUOR, 2, (byte) 0);
         condition.timerEvent();
         assertEquals(EWinState.UNDECIDED, player.getWinState());
-        player.getProductionStatistic().materialProduced(EMaterialType.MEAD);
+        putStack(10, EMaterialType.MEAD, 1, (byte) 0);
         condition.timerEvent();
         assertEquals(EWinState.WON, player.getWinState());
+    }
+    @Test
+    public void pastProductionAndEnemyStocksDoNotSatisfyGoals() {
+        player.getProductionStatistic().materialProduced(EMaterialType.PLANK);
+        player.getProductionStatistic().materialProduced(EMaterialType.PLANK);
+        player.getProductionStatistic().materialProduced(EMaterialType.STONE);
+        putStack(8, EMaterialType.PLANK, 2, (byte) 1);
+        putStack(10, EMaterialType.STONE, 1, (byte) 1);
+        condition.timerEvent();
+        assertEquals(EWinState.UNDECIDED, player.getWinState());
+    }
+
+    @Test
+    public void consumedGoodsMustBeReplacedBeforeWinning() {
+        StackMapObject planks = putStack(8, EMaterialType.PLANK, 2, (byte) 0);
+        condition.timerEvent();
+        planks.decrement();
+        putStack(10, EMaterialType.STONE, 1, (byte) 0);
+        condition.timerEvent();
+        assertEquals(EWinState.UNDECIDED, player.getWinState());
+        planks.increment();
+        condition.timerEvent();
+        assertEquals(EWinState.WON, player.getWinState());
+    }
+
+    @Test
+    public void unmappedLegacyGoalCannotCauseAutomaticVictory() {
+        condition.produceGoodsToWin(Set.of(new OriginalProduceGoodsWinCondition(null, 1)));
+        condition.timerEvent();
+        assertEquals(EWinState.UNDECIDED, player.getWinState());
+    }
+
+    private StackMapObject putStack(int x, EMaterialType type, int count, byte owner) {
+        grid.getPartitionsGrid().changePlayerAt(x, 8, owner);
+        StackMapObject stack = new StackMapObject(type, (byte) count);
+        grid.getObjectsGrid().addMapObjectAt(x, 8, stack);
+        return stack;
     }
 }

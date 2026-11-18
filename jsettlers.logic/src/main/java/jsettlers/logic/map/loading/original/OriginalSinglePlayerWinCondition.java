@@ -23,7 +23,9 @@ import java.util.function.Supplier;
 import jsettlers.common.buildings.EBuildingType;
 import jsettlers.common.material.EMaterialType;
 import jsettlers.common.player.EWinState;
-import jsettlers.common.player.IProductionStatistic;
+import jsettlers.common.mapobject.EMapObjectType;
+import jsettlers.common.mapobject.IMapObject;
+import jsettlers.common.mapobject.IStackMapObject;
 import jsettlers.common.position.ShortPoint2D;
 import jsettlers.logic.buildings.Building;
 import jsettlers.logic.constants.MatchConstants;
@@ -197,15 +199,27 @@ public class OriginalSinglePlayerWinCondition extends WinLoseHandler implements 
 	}
 
 	private boolean checkProduceCondition() {
-		IProductionStatistic productionStatistic = players[MAIN_PLAYER].getProductionStatistic();
+		if (produceToWin.isEmpty()) return true;
 
-		for(OriginalProduceGoodsWinCondition produceCondition : produceToWin) {
-			EMaterialType type = produceCondition.getType();
-			if(type == null || !type.isDroppable()) continue;
-
-			if(productionStatistic.getAmountProduced(type) < produceCondition.getAmount()) return false;
+		// Original goods goals require current stocks, not cumulative production.
+		// Count physical stacks so transport reservations do not remove goods early.
+		int[] amounts = new int[EMaterialType.NUMBER_OF_DROPPABLE_MATERIALS];
+		IMapObject[] objects = mainGrid.getObjectsGrid().getObjectArray();
+		int width = mainGrid.getWidth();
+		for (int i = 0; i < objects.length; i++) {
+			if (objects[i] == null) continue;
+			IStackMapObject stack = (IStackMapObject) objects[i].getMapObject(EMapObjectType.STACK_OBJECT);
+			if (stack != null && mainGrid.getPartitionsGrid().getPlayerIdAt(i % width, i / width) == MAIN_PLAYER) {
+				amounts[stack.getMaterialType().ordinal] += stack.getSize();
+			}
 		}
 
+		for (OriginalProduceGoodsWinCondition goal : produceToWin) {
+			EMaterialType type = goal.getType();
+			// Older saves can contain unmapped goals. Never treat those as satisfied.
+			if (type == null || !type.isDroppable()) return false;
+			if (amounts[type.ordinal] < goal.getAmount()) return false;
+		}
 		return true;
 	}
 }
