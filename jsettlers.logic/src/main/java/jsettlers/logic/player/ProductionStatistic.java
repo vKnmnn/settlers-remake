@@ -31,16 +31,17 @@ public class ProductionStatistic implements IProductionStatistic, Serializable {
 	private static final long serialVersionUID = 1L;
 
 	// Simulation-time buckets; bounded storage independent of match length.
-	static final int BUCKET_MILLIS = 60_000;
+	static final int BUCKET_MILLIS = 14_080;
+	static final int HISTORY_BUCKETS = 256;
 	static final int MAX_HISTORY_MINUTES = 60;
 	private final int[] produced = new int[EMaterialType.NUMBER_OF_MATERIALS];
-	private int[][] history = new int[EMaterialType.NUMBER_OF_MATERIALS][MAX_HISTORY_MINUTES];
+	private int[][] history = new int[EMaterialType.NUMBER_OF_MATERIALS][HISTORY_BUCKETS];
 	private int[] bucketIds = emptyBucketIds();
 	private int availableSinceMillis;
 	private int lastEventTime;
 
 	private static int[] emptyBucketIds() {
-		int[] ids = new int[MAX_HISTORY_MINUTES];
+		int[] ids = new int[HISTORY_BUCKETS];
 		Arrays.fill(ids, -1);
 		return ids;
 	}
@@ -84,22 +85,28 @@ public class ProductionStatistic implements IProductionStatistic, Serializable {
 			throw new IllegalArgumentException("History window must be between 1 and " + MAX_HISTORY_MINUTES);
 		}
 		int lastBucket = Math.max(0, timeMillis) / BUCKET_MILLIS;
-		int[] amounts = new int[windowMinutes];
+		int count = (windowMinutes * 60_000 + BUCKET_MILLIS - 1) / BUCKET_MILLIS;
+		int[] amounts = new int[HISTORY_BUCKETS];
 		for (int i = 0; i < amounts.length; i++) {
 			int bucket = lastBucket - amounts.length + 1 + i;
 			if (bucket < 0 || materialType == null || materialType.ordinal >= history.length) continue;
 			int index = bucket % bucketIds.length;
 			if (bucketIds[index] == bucket) amounts[i] = history[materialType.ordinal][index];
 		}
-		return new ProductionHistory(amounts, BUCKET_MILLIS, (lastBucket + 1) * BUCKET_MILLIS,
-				Math.max(availableSinceMillis, Math.max(0, lastBucket - bucketIds.length + 1) * BUCKET_MILLIS));
+		int availableSince = Math.max(availableSinceMillis, Math.max(0, lastBucket - bucketIds.length + 1) * BUCKET_MILLIS);
+		int endTime = (lastBucket + 1) * BUCKET_MILLIS;
+		ProductionHistory full = new ProductionHistory(amounts, BUCKET_MILLIS, endTime, availableSince);
+		// Smooth before cropping so changing the display window does not change the curve.
+		return new ProductionHistory(Arrays.copyOfRange(amounts, amounts.length - count, amounts.length),
+				BUCKET_MILLIS, endTime, availableSince,
+				Arrays.copyOfRange(full.getSmoothedAmounts(), amounts.length - count, amounts.length));
 	}
 
 	private void readObject(ObjectInputStream in) throws IOException, ClassNotFoundException {
 		in.defaultReadObject();
 		if (history == null || bucketIds == null) {
 			// Old saves retain their totals, but cannot reconstruct past production times.
-			history = new int[EMaterialType.NUMBER_OF_MATERIALS][MAX_HISTORY_MINUTES];
+			history = new int[EMaterialType.NUMBER_OF_MATERIALS][HISTORY_BUCKETS];
 			bucketIds = emptyBucketIds();
 			availableSinceMillis = currentTime();
 			lastEventTime = availableSinceMillis;
