@@ -334,3 +334,33 @@ serialization failures and interruptions display a failure message instead.
 Repeated status messages replace their previous occurrence and receive a fresh
 visible lifetime. Status messages have no map position and do not center the
 camera. Save output streams are closed on failure as well as success.
+
+Validation: save feedback is covered by success, repeated saves, I/O and runtime
+failure, interruption, lost-player saves, message expiry and stream cleanup tests.
+
+### Priest teleportation and divine gifts
+
+`SEND_FOES` and `CALL_HELP` now choose free, traversable landing cells instead of
+inverting the pathfinder predicate and overwriting occupants. Units remain at
+source when no landing cell exists. `CALL_HELP` no longer falls through to
+`CURSE_BOWMAN`. The installed military manual describes these as separate Asian
+and Egyptian spells. Actual-grid regression tests cover both teleport directions,
+occupied and blocked destinations, exhausted landing space and the unwanted curse.
+
+Divine gifts now draw four positive packages from civilization-specific material
+weights and quantity ranges. Evidence: Ghidra `005499b0`, material table
+`0065a37c`, cumulative thresholds `0065a3fc`, quantity parameters `0065a47c`, in
+the S3.EXE identified above. Each package uses two deterministic simulation RNG
+draws in [0, 65536); quantity is `draw % ((n + 1) / 2) + n / 2`.
+The previous uniform draw over every material enum could produce unusable goods
+or empty gifts. The unsupported own-team territory restriction is removed.
+
+Placement still uses the remake's radius-three free-cell search. Original
+`005046b0` searches up to 10,000 offsets and can merge compatible stacks; that
+placement algorithm is not reproduced here. Crowded target areas can therefore
+receive fewer packages. Random draws still occur for all four packages, including
+when no space is available. Original executable/decompiled code stays outside
+the repository; only behavioral findings are recorded here.
+
+Validation: all 118 logic unit tests and 23 graphics tests pass, including the
+new teleport, gift distribution and actual-grid gift scenarios.

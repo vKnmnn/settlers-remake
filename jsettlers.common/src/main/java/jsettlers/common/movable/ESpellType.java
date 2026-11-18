@@ -98,7 +98,7 @@ public enum ESpellType {
 	public static final int SHIELD_MAX_SOLDIERS = 20;
 	public static final int FREEZE_FOES_MAX_SOLDIERS = 20;
 
-	public static final int GIFTS_MAX_STACKS = 5;
+	public static final int GIFTS_MAX_STACKS = 4;
 	public static final int GIFTS_RADIUS = 3;
 
 	public static final int SUMMON_FISH_RADIUS = 5;

@@ -285,7 +285,7 @@ public class MageMovable extends AttackableHumanMovable implements IMageMovable 
 
 
 				// the fitsSearchType only works with PLAYER_CONTROLLED_HUMAN_MOVABLE_TYPES and nothing else!
-				sort(spellRegion()).filter((x, y) -> !grid.fitsSearchType(this, x, y, ESearchType.NON_BLOCKED_OR_PROTECTED))
+				sort(spellRegion()).filter((x, y) -> grid.fitsSearchType(this, x, y, ESearchType.NON_BLOCKED_OR_PROTECTED))
 						.forEach((x, y) -> {
 							ILogicMovable send = sendEnemies.poll();
 							if(send != null) {
@@ -307,7 +307,7 @@ public class MageMovable extends AttackableHumanMovable implements IMageMovable 
 
 
 				sort(spellRegion(position, Constants.SPELL_EFFECT_RADIUS))
-						.filter((x, y) -> !grid.fitsSearchType(this, x, y, ESearchType.NON_BLOCKED_OR_PROTECTED))
+						.filter((x, y) -> grid.fitsSearchType(this, x, y, ESearchType.NON_BLOCKED_OR_PROTECTED))
 						.forEach((x, y) -> {
 						ILogicMovable send = callDefenders.poll();
 							if(send != null) {
@@ -317,6 +317,7 @@ public class MageMovable extends AttackableHumanMovable implements IMageMovable 
 							}
 						});
 				animation = 121;
+				break;
 			case CURSE_BOWMAN:
 				sort(spellRegion()).map(grid::getMovableAt)
 						.filter(lm -> lm!=null&&lm.isAlive()&&lm instanceof IBowmanMovable)
@@ -326,17 +327,19 @@ public class MageMovable extends AttackableHumanMovable implements IMageMovable 
 						.forEach(IBowmanMovable::convertToPioneer);
 				break;
 			case GIFTS:
-				spellRegion(ESpellType.GIFTS_RADIUS).filter((x, y) -> !grid.isBlockedOrProtected(x, y))
-						.filter((x, y) -> teamId(x, y) == -1 || teamId(x, y) == teamId())
-						.limit(MatchConstants.random().nextInt(ESpellType.GIFTS_MAX_STACKS+1))
-						.forEach((x, y) -> {
-							ShortPoint2D at = new ShortPoint2D(x, y);
-							//TODO only give useful stuff
-							EMaterialType type = EMaterialType.values()[MatchConstants.random().nextInt(EMaterialType.values().length)];
-							int size = MatchConstants.random().nextInt(9);
-							for(int i = 0; i != size; i++) grid.dropMaterial(at, type, true, false);
-							effectLocations.add(at);
-						});
+				for (int packageIndex = 0; packageIndex < ESpellType.GIFTS_MAX_STACKS; packageIndex++) {
+					GiftDistribution.Gift gift = GiftDistribution.sample(player.getCivilisation(), MatchConstants.random()::nextInt);
+					spellRegion(ESpellType.GIFTS_RADIUS)
+							.filter((x, y) -> !grid.isBlockedOrProtected(x, y))
+							.limit(1)
+							.forEach((x, y) -> {
+								ShortPoint2D at = new ShortPoint2D(x, y);
+								for (int i = 0; i < gift.getAmount(); i++) {
+									if (!grid.dropMaterial(at, gift.getMaterial(), true, false)) break;
+								}
+								effectLocations.add(at);
+							});
+				}
 				duration = 1;
 				sound = 78;
 				animation = 114;
