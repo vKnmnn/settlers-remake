@@ -97,7 +97,8 @@ class GuiTaskExecutor implements ITaskExecutor {
 		}
 
 		SimpleGuiTask guiTask = (SimpleGuiTask) iTask;
-		if (grid.hasLost(guiTask.getPlayerId()) && !CommonConstants.CONTROL_ALL) { // if player lost, don't execute his tasks any more
+		if (guiTask.getGuiAction() != EGuiAction.QUICK_SAVE
+				&& grid.hasLost(guiTask.getPlayerId()) && !CommonConstants.CONTROL_ALL) { // lost players cannot issue gameplay commands
 			return;
 		}
 
@@ -295,9 +296,17 @@ class GuiTaskExecutor implements ITaskExecutor {
 	private void save() {
 		try {
 			grid.save(playerId, guiInterface.getUIState());
-		} catch (IOException | InterruptedException e) {
+		} catch (InterruptedException e) {
+			Thread.currentThread().interrupt();
 			e.printStackTrace();
+			guiInterface.showStatus("save_failed");
+			return;
+		} catch (IOException | RuntimeException e) {
+			e.printStackTrace();
+			guiInterface.showStatus("save_failed");
+			return;
 		}
+		guiInterface.showStatus("save_success");
 	}
 
 	private void setBuildingPriority(SetBuildingPriorityGuiTask task) {

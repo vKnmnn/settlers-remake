@@ -218,18 +218,17 @@ public class MapList implements IMapListerCallable {
 	 */
 	public synchronized void saveMap(PlayerState[] playerStates, MapFileHeader header, MainGrid grid) throws IOException {
 		MilliStopWatch watch = new MilliStopWatch();
-		OutputStream outStream = saveDirectory.getOutputStream(header);
+		try (OutputStream outStream = saveDirectory.getOutputStream(header)) {
+			header.writeTo(outStream);
+			try (ObjectOutputStream oos = new ObjectOutputStream(outStream)) {
+				MatchConstants.serialize(oos);
+				oos.writeObject(playerStates);
+				GameSerializer gameSerializer = new GameSerializer();
+				gameSerializer.save(grid, oos);
+				RescheduleTimer.saveTo(oos);
+			}
+		}
 
-		header.writeTo(outStream);
-
-		ObjectOutputStream oos = new ObjectOutputStream(outStream);
-		MatchConstants.serialize(oos);
-		oos.writeObject(playerStates);
-		GameSerializer gameSerializer = new GameSerializer();
-		gameSerializer.save(grid, oos);
-		RescheduleTimer.saveTo(oos);
-
-		oos.close();
 		watch.stop("Writing savegame required");
 
 		loadFileList();

@@ -35,4 +35,7 @@ public interface ITaskExecutorGuiInterface {
 	 */
 	UIState getUIState();
 
+	/** Shows local status feedback using a localization key. */
+	void showStatus(String messageLabel);
+
 }

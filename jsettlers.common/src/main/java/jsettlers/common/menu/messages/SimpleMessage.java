@@ -14,6 +14,8 @@
  */
 package jsettlers.common.menu.messages;
 
+import java.util.Objects;
+
 import jsettlers.common.buildings.IBuilding;
 import jsettlers.common.material.EMaterialType;
 import jsettlers.common.position.ShortPoint2D;
@@ -88,13 +90,18 @@ public class SimpleMessage implements IMessage {
 				&& m.getType() == this.type) {
 			if ((this.type == EMessageType.ATTACKED) || (this.type == EMessageType.MINERALS)) {
 				if (m.getAge() < MESSAGE_TTL / 6) {
-					return this.pos.getOnGridDistTo(m.getPosition()) < MESSAGE_DIST_THRESHOLD;
+					return this.pos != null && m.getPosition() != null
+						&& this.pos.getOnGridDistTo(m.getPosition()) < MESSAGE_DIST_THRESHOLD;
 				}
 			} else {
-				return this.pos.equals(m.getPosition());
+				return Objects.equals(this.pos, m.getPosition());
 			}
 		}
 		return false;
+	}
+
+	public static IMessage status(String messageLabel) {
+		return new SimpleMessage(EMessageType.STATUS, messageLabel, (byte) -1, null);
 	}
 
 	public static IMessage donkeyAttacked(byte otherplayer, ShortPoint2D pos) {

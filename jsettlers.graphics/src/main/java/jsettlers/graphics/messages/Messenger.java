@@ -16,6 +16,8 @@ package jsettlers.graphics.messages;
 
 import java.util.LinkedList;
 
+import jsettlers.common.menu.messages.EMessageType;
+
 import jsettlers.common.menu.messages.IMessage;
 import jsettlers.common.position.ShortPoint2D;
 import jsettlers.common.statistics.IGameTimeProvider;
@@ -44,7 +46,7 @@ public class Messenger {
 	 * 
 	 * @return The messages to display.
 	 */
-	public IMessage[] getMessages() {
+	public synchronized IMessage[] getMessages() {
 		return messages.toArray(new IMessage[messages.size()]);
 	}
 
@@ -57,6 +59,10 @@ public class Messenger {
 	 * @return
 	 */
 	public synchronized boolean addMessage(IMessage message) {
+		if (message.getType() == EMessageType.STATUS) {
+			// A repeated operation is new feedback and must receive a fresh lifetime.
+			messages.removeIf(message::duplicates);
+		}
 		if (isNews(message)) {
 			messages.addFirst(message);
 			if (messages.size() > IMessage.MAX_MESSAGES)
@@ -78,12 +84,7 @@ public class Messenger {
 		if (!gameTimeProvider.isGamePausing()) {
 			// update message ages
 			int interval = millis - latestTickTime;
-			for (IMessage m : messages) {
-				if (m.ageBy(interval) > IMessage.MESSAGE_TTL)
-					// remove all remaining messages, assuming they in order
-					while (!messages.pollLast().equals(m))
-						;
-			}
+			messages.removeIf(message -> message.ageBy(interval) > IMessage.MESSAGE_TTL);
 		}
 		latestTickTime = millis;
 	}
@@ -94,7 +95,7 @@ public class Messenger {
 	 * @param msg {@link IMessage} to be inspected.
 	 * @return true, if message should be displayed.
 	 */
-	boolean isNews(IMessage msg) {
+	synchronized boolean isNews(IMessage msg) {
 		for (IMessage m : messages) {
 			if (msg.duplicates(m)) {
 				return false;

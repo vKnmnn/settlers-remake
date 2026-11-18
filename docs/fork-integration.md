@@ -325,3 +325,12 @@ and the common-module suite passed (157 existing common cases remain skipped).
 Both the group-specific serialization scenario and the save/load/save integration
 test passed. Desktop release built successfully. No interactive multiplayer
 session or Android build was performed for this change.
+
+### Save completion feedback
+
+Saving now displays “Spiel gespeichert.” / “Game saved.” only after the save
+operation returns successfully, including stream closure. I/O errors, runtime
+serialization failures and interruptions display a failure message instead.
+Repeated status messages replace their previous occurrence and receive a fresh
+visible lifetime. Status messages have no map position and do not center the
+camera. Save output streams are closed on failure as well as success.

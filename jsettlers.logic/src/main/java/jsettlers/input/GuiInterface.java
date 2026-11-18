@@ -65,6 +65,7 @@ import jsettlers.common.material.EPriority;
 import jsettlers.common.menu.IMapInterfaceConnector;
 import jsettlers.common.menu.IMapInterfaceListener;
 import jsettlers.common.menu.UIState;
+import jsettlers.common.menu.messages.SimpleMessage;
 import jsettlers.common.movable.EMovableType;
 import jsettlers.common.movable.EShipType;
 import jsettlers.common.movable.ESoldierType;
@@ -804,6 +805,11 @@ public class GuiInterface implements IMapInterfaceListener, ITaskExecutorGuiInte
 				setSelection(newSelection);
 			}
 		}
+	}
+
+	@Override
+	public void showStatus(String messageLabel) {
+		connector.showMessage(SimpleMessage.status(messageLabel));
 	}
 
 	@Override
