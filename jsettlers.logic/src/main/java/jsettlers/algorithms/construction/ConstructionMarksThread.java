@@ -34,13 +34,13 @@ public final class ConstructionMarksThread implements Runnable {
 	private final IPausingSupplier pausingSupplier;
 	private final Thread thread;
 
-	private boolean canceled;
+	private volatile boolean canceled;
 
 	/**
 	 * area of tiles to be checked.
 	 */
-	private MapRectangle mapArea = null;
-	private BuildingVariant building = null;
+	private volatile MapRectangle mapArea = null;
+	private volatile BuildingVariant building = null;
 
 	public ConstructionMarksThread(AbstractConstructionMarkableMap map, IPausingSupplier pausingSupplier, byte player) {
 		this.algorithm = new NewConstructionMarksAlgorithm(map, player);
@@ -56,7 +56,7 @@ public final class ConstructionMarksThread implements Runnable {
 		while (!canceled) {
 			try {
 				synchronized (this) {
-					while (building == null) {
+					while (building == null && !canceled) {
 						this.wait();
 					}
 				}
@@ -67,6 +67,7 @@ public final class ConstructionMarksThread implements Runnable {
 						watch.restart();
 
 						BuildingVariant building = this.building;
+						MapRectangle mapArea = this.mapArea;
 						if (building != null && mapArea != null) { // if the task has already been canceled
 							algorithm.calculateConstructMarks(mapArea, building);
 						}
@@ -77,11 +78,12 @@ public final class ConstructionMarksThread implements Runnable {
 						wait(AlgorithmConstants.CONSTRUCT_MARKS_MAX_REFRESH_TIME);
 					}
 				}
-				algorithm.removeConstructionMarks();
 			} catch (InterruptedException e) {
 				// do nothing
 			} catch (Throwable t) { // this thread must never be destroyed due to errors
 				t.printStackTrace();
+			} finally {
+				algorithm.removeConstructionMarks();
 			}
 		}
 	}
