@@ -23,6 +23,7 @@ import java.util.List;
 
 import javax.swing.JButton;
 import javax.swing.JLabel;
+import javax.swing.BoxLayout;
 import javax.swing.JPanel;
 import javax.swing.JScrollPane;
 import javax.swing.JTable;
@@ -41,6 +42,7 @@ import jsettlers.main.swing.lookandfeel.components.BackgroundPanel;
 public class EndgameStatsPanel extends BackgroundPanel {
 	private final JTable statsTable = new JTable();
 	private final JLabel result = new JLabel();
+	private final JLabel completeness = new JLabel();
 	private final List<JButton> actionButtons = new ArrayList<>();
 
 	public EndgameStatsPanel(JSettlersFrame settlersFrame) {
@@ -49,12 +51,32 @@ public class EndgameStatsPanel extends BackgroundPanel {
 
 	/** When leaveGame is supplied, the game is still running behind this result window. */
 	public EndgameStatsPanel(Runnable continueAction, Runnable leaveGame) {
-		setPreferredSize(new Dimension(1000, 480));
+		setPreferredSize(new Dimension(1200, 480));
 		JPanel mainPane = new JPanel(new BorderLayout(8, 8));
-		mainPane.add(result, BorderLayout.NORTH);
+		JPanel heading = new JPanel();
+		heading.setLayout(new BoxLayout(heading, BoxLayout.Y_AXIS));
+		heading.add(result);
+		heading.add(completeness);
+		mainPane.add(heading, BorderLayout.NORTH);
 		statsTable.setRowHeight(26);
 		result.putClientProperty(ELFStyle.KEY, ELFStyle.LABEL_HEADER);
-		statsTable.setPreferredScrollableViewportSize(new Dimension(850, 250));
+		completeness.putClientProperty(ELFStyle.KEY, ELFStyle.LABEL_LONG);
+		statsTable.setPreferredScrollableViewportSize(new Dimension(1100, 250));
+		statsTable.setAutoResizeMode(JTable.AUTO_RESIZE_OFF);
+		statsTable.setTableHeader(new javax.swing.table.JTableHeader(statsTable.getColumnModel()) {
+			@Override
+			public String getToolTipText(java.awt.event.MouseEvent event) {
+				int column = columnAtPoint(event.getPoint());
+				if (column < 0) return null;
+				switch (getColumnModel().getColumn(column).getModelIndex()) {
+				case 5: return Labels.getString("stats-panel-buildings-tooltip");
+				case 6: return Labels.getString("stats-panel-food-tooltip");
+				case 7: return Labels.getString("stats-panel-mines-tooltip");
+				case 11: return Labels.getString("stats-panel-battles-tooltip");
+				default: return null;
+				}
+			}
+		});
 		JScrollPane scroll = new JScrollPane(statsTable);
 		scroll.setColumnHeaderView(statsTable.getTableHeader());
 		mainPane.add(scroll, BorderLayout.CENTER);
@@ -88,13 +110,18 @@ public class EndgameStatsPanel extends BackgroundPanel {
 		result.setText(outcome + " — " + Labels.getString("stats-panel-time") + " "
 				+ String.format("%02d:%02d:%02d", seconds / 3600, seconds / 60 % 60, seconds % 60));
 		statsTable.setModel(createModel(game.getAllInGamePlayers()));
-		statsTable.getColumnModel().getColumn(0).setPreferredWidth(250);
-		statsTable.getColumnModel().getColumn(1).setPreferredWidth(45);
-		statsTable.getColumnModel().getColumn(5).setPreferredWidth(160);
+		int[] widths = { 220, 45, 95, 80, 75, 80, 75, 75, 75, 75, 80, 80 };
+		for (int i = 0; i < widths.length; i++) statsTable.getColumnModel().getColumn(i).setPreferredWidth(widths[i]);
+		boolean complete = true;
+		IInGamePlayer[] players = game.getAllInGamePlayers();
+		if (players != null) for (IInGamePlayer player : players) {
+			if (player != null && !player.getEndgameStatistic().isComplete()) complete = false;
+		}
+		completeness.setText(complete ? " " : Labels.getString("stats-panel-incomplete"));
 	}
 
 	static DefaultTableModel createModel(IInGamePlayer[] players) {
-		String[] keys = { "name", "team", "result", "manna", "gold", "soldiers" };
+		String[] keys = { "name", "team", "result", "score", "settlers", "buildings", "food", "mines", "gold", "manna", "warriors", "battles" };
 		String[] columns = new String[keys.length];
 		for (int i = 0; i < keys.length; i++) columns[i] = Labels.getString("stats-panel-" + keys[i]);
 		List<Object[]> rows = new ArrayList<>();
@@ -105,7 +132,10 @@ public class EndgameStatsPanel extends BackgroundPanel {
 				(player.getPlayerId() + 1) + ": " + stats.getName(),
 				stats.getTeam() + 1,
 				Labels.getString("stats-panel-result-" + player.getWinState()),
-				stats.getAmountOfProducedMana(), stats.getAmountOfProducedGold(), stats.getAmountOfProducedSoldiers()
+				stats.isComplete() ? stats.getScore() : "—",
+				stats.getSettlersCreated(), stats.getBuildingMaterialsUsed(), stats.getFoodConsumed(),
+				stats.getMinedMaterials(), stats.getGoldValue(), stats.getManaProduced(),
+				stats.getSoldiersRecruited(), stats.getBattlePoints()
 			});
 		}
 		return new DefaultTableModel(rows.toArray(new Object[0][]), columns) {

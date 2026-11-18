@@ -22,22 +22,19 @@ public class EndgameStatsPanelTest {
 		IInGamePlayer player = new IPlayer.DummyPlayer((byte) 2) {
 			@Override public EWinState getWinState() { return EWinState.WON; }
 			@Override public IEndgameStatistic getEndgameStatistic() {
-				return new IEndgameStatistic() {
-					public short getAmountOfProducedSoldiers() { return 12; }
-					public short getAmountOfProducedMana() { return 25; }
-					public short getAmountOfProducedGold() { return 8; }
-					public String getName() { return "Player"; }
-					public byte getTeam() { return 1; }
-				};
+				return statistics(true);
 			}
 		};
 		DefaultTableModel model = EndgameStatsPanel.createModel(new IInGamePlayer[] { null, player });
 		assertEquals(1, model.getRowCount());
 		assertEquals("3: Player", model.getValueAt(0, 0));
 		assertEquals(2, model.getValueAt(0, 1));
-		assertEquals((short) 25, model.getValueAt(0, 3));
-		assertEquals((short) 8, model.getValueAt(0, 4));
-		assertEquals((short) 12, model.getValueAt(0, 5));
+		assertEquals(12, model.getColumnCount());
+		assertEquals(98765L, model.getValueAt(0, 3));
+		assertEquals(55000L, model.getValueAt(0, 4));
+		assertEquals(8L, model.getValueAt(0, 8));
+		assertEquals(25L, model.getValueAt(0, 9));
+		assertEquals(12L, model.getValueAt(0, 10));
 		assertFalse(model.isCellEditable(0, 0));
 	}
 	@Test
@@ -69,6 +66,36 @@ public class EndgameStatsPanelTest {
 			}
 		});
 		assertEquals(2, returned.get());
+	}
+
+	@Test
+	public void incompleteLegacyStatisticsDoNotInventComparableScores() {
+		IInGamePlayer player = new IPlayer.DummyPlayer((byte) 0) {
+			@Override public IEndgameStatistic getEndgameStatistic() { return statistics(false); }
+		};
+		DefaultTableModel model = EndgameStatsPanel.createModel(new IInGamePlayer[] { player });
+		assertEquals("—", model.getValueAt(0, 3));
+		assertEquals(25L, model.getValueAt(0, 9));
+	}
+
+	private static IEndgameStatistic statistics(boolean complete) {
+		return new IEndgameStatistic() {
+			public short getAmountOfProducedSoldiers() { return 12; }
+			public short getAmountOfProducedMana() { return 25; }
+			public short getAmountOfProducedGold() { return 8; }
+			public String getName() { return "Player"; }
+			public byte getTeam() { return 1; }
+			public long getScore() { return 98765; }
+			public long getSettlersCreated() { return 55000; }
+			public long getBuildingMaterialsUsed() { return 16; }
+			public long getFoodConsumed() { return 17; }
+			public long getMinedMaterials() { return 18; }
+			public long getGoldValue() { return 8; }
+			public long getManaProduced() { return 25; }
+			public long getSoldiersRecruited() { return 12; }
+			public long getBattlePoints() { return 19; }
+			public boolean isComplete() { return complete; }
+		};
 	}
 
 	private static JButton findButton(Container root, String text) {

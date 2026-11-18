@@ -212,6 +212,7 @@ public class JSettlersFrame extends JFrame {
 		dialog.setContentPane(panel);
 		dialog.setDefaultCloseOperation(WindowConstants.DISPOSE_ON_CLOSE);
 		dialog.pack();
+		dialog.setSize(Math.min(dialog.getWidth(), getWidth()), Math.min(dialog.getHeight(), getHeight()));
 		dialog.setLocationRelativeTo(this);
 		dialog.setVisible(true);
 	}
