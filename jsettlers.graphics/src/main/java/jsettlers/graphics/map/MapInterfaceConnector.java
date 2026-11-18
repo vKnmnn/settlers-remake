@@ -19,6 +19,7 @@ import java.util.LinkedList;
 import jsettlers.common.menu.IMapInterfaceConnector;
 import jsettlers.common.menu.IMapInterfaceListener;
 import jsettlers.common.menu.UIState;
+import jsettlers.common.action.EActionType;
 import jsettlers.common.action.IAction;
 import jsettlers.common.menu.messages.IMessage;
 import jsettlers.common.position.ShortPoint2D;
@@ -117,6 +118,9 @@ public class MapInterfaceConnector implements ActionFireable, IMapInterfaceConne
 
 	@Override
 	public void fireAction(IAction action) {
+		if (action.getActionType() == EActionType.EXIT) {
+			System.out.println("Exit action queued by graphics interface.");
+		}
 		this.actionFirerer.fireAction(action);
 	}
 

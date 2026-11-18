@@ -158,6 +158,7 @@ public class JSettlersGame {
 	}
 
 	public void stop() {
+		System.out.println("Game shutdown requested.");
 		synchronized (stopMutex) {
 			stopped = true;
 			stopMutex.notifyAll();
@@ -246,11 +247,17 @@ public class JSettlersGame {
 					}
 				}
 
+				System.out.println("Game shutdown: stopping network and simulation clock.");
 				networkConnector.shutdown();
+				System.out.println("Game shutdown: stopping map background threads.");
 				mainGrid.stopThreads();
+				System.out.println("Game shutdown: stopping graphics and music.");
 				connector.shutdown();
+				System.out.println("Game shutdown: stopping interface threads.");
 				guiInterface.stop();
+				System.out.println("Game shutdown: clearing simulation state (waiting for active saves).");
 				clearState();
+				System.out.println("Game shutdown: complete; returning to statistics.");
 
 				System.setErr(systemErrorStream);
 				System.setOut(systemOutStream);
