@@ -144,6 +144,9 @@ import jsettlers.logic.player.PlayerSetting;
 public final class MainGrid implements Serializable {
 	private static final long serialVersionUID = 3824511313693431424L;
 
+	/** Serializes saving with game shutdown. */
+	public static final Object SAVE_LOCK = new Object();
+
 	final String mapId;
 	final String mapName;
 
@@ -366,20 +369,29 @@ public final class MainGrid implements Serializable {
 	}
 
 	public void save(Byte playerId, UIState uiState) throws IOException {
-		boolean savedPausingState = MatchConstants.clock().isPausing();
-		MatchConstants.clock().setPausing(true);
-		try {
-			Thread.sleep(300L); // FIXME @Andreas serializer should wait until threads did their work!
-		} catch (InterruptedException e) {
-			e.printStackTrace();
+		synchronized (SAVE_LOCK) {
+			if (MatchConstants.clock() == null) {
+				throw new IOException("There is no running game to save.");
+			}
+			boolean savedPausingState = MatchConstants.clock().isPausing();
+			MatchConstants.clock().setPausing(true);
+			// the fog of war is written into the savegame, but updated by its own threads
+			FogOfWar pausedFogOfWar = fogOfWar;
+			if (pausedFogOfWar != null) {
+				pausedFogOfWar.pauseThreads();
+			}
+			try {
+				PlayerState[] playerStates = calculatePlayerStates(playerId, uiState);
+				MapFileHeader header = generateSaveHeader(playerId);
+				MapList list = MapList.getDefaultList();
+				list.saveMap(playerStates, header, MainGrid.this);
+			} finally {
+				if (pausedFogOfWar != null) {
+					pausedFogOfWar.resumeThreads();
+				}
+				MatchConstants.clock().setPausing(savedPausingState);
+			}
 		}
-
-		PlayerState[] playerStates = calculatePlayerStates(playerId, uiState);
-		MapFileHeader header = generateSaveHeader(playerId);
-		MapList list = MapList.getDefaultList();
-		list.saveMap(playerStates, header, MainGrid.this);
-
-		MatchConstants.clock().setPausing(savedPausingState);
 	}
 
 	private PlayerState[] calculatePlayerStates(Byte playerId, UIState uiState) {

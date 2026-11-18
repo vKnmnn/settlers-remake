@@ -417,9 +417,11 @@ public class JSettlersGame {
 	}
 
 	public static void clearState() {
-		RescheduleTimer.stopAndClear();
-		MovableManager.resetState();
-		Building.clearState();
-		MatchConstants.clearState();
+		synchronized (MainGrid.SAVE_LOCK) {
+			RescheduleTimer.stopAndClear();
+			MovableManager.resetState();
+			Building.clearState();
+			MatchConstants.clearState();
+		}
 	}
 }
