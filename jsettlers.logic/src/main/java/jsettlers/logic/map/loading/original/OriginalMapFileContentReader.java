@@ -696,6 +696,9 @@ class OriginalMapFileContentReader {
 
 	OriginalSinglePlayerWinCondition readWinCondition(MainGrid mainGrid) throws MapLoadException {
 		MapResourceInfo filePart = findAndDecryptFilePartSafe(EOriginalMapFilePartType.WIN_COND);
+		if (filePart.size < 119) {
+			throw new MapLoadException("Original map victory conditions are truncated (expected at least 119 bytes).");
+		}
 
 		OriginalSinglePlayerWinCondition winCondition = new OriginalSinglePlayerWinCondition(mainGrid);
 
@@ -718,8 +721,12 @@ class OriginalMapFileContentReader {
 
 			for(int i = 0; i < 10; i++) {
 				int playerId = readByteFrom(destroyBuildingsBase+(i*2)+1);
-				EBuildingType buildingType = EOriginalMapBuildingType.getTypeByInt(readByteFrom(destroyBuildingsBase+(i*2)+2)).getValue();
-				if(buildingType == null || playerId == 0xFF) continue;
+				if (playerId == 0xFF) continue;
+				int originalType = readByteFrom(destroyBuildingsBase+(i*2)+2);
+				EBuildingType buildingType = EOriginalMapBuildingType.getTypeByInt(originalType).getValue();
+				if (buildingType == null) {
+					throw new MapLoadException("Unsupported original victory target: building type " + originalType + " for player " + playerId);
+				}
 
 				destroyBuildingsConditions.add(new OriginalDestroyBuildingsWinCondition((byte)playerId, buildingType));
 			}
@@ -761,9 +768,14 @@ class OriginalMapFileContentReader {
 
 			for(int i = 0; i < 3; i++) {
 				int amount = readBEWordFrom(producedGoodsBase+(i*3)+1);
-				EMaterialType type = EOriginalMapStackType.getTypeByInt(readByteFrom(producedGoodsBase+(i*3)+2)).value;
+				// Each record is a little-endian uint16 amount followed by one material byte.
+				int originalType = readByteFrom(producedGoodsBase+(i*3)+3);
+				EMaterialType type = EOriginalMapStackType.getTypeByInt(originalType).value;
 
 				if(amount > 0) {
+					if (type == null || !type.isDroppable()) {
+						throw new MapLoadException("Unsupported original victory target: material type " + originalType);
+					}
 					produceGoods.add(new OriginalProduceGoodsWinCondition(type, amount));
 				}
 			}
