@@ -21,6 +21,7 @@ import java.io.Serializable;
 import java.util.BitSet;
 import java.util.Date;
 import java.util.Locale;
+import java.util.List;
 import java.util.Set;
 
 import java.util.Optional;
@@ -83,7 +84,6 @@ import jsettlers.logic.DockPosition;
 import jsettlers.logic.FerryEntrance;
 import jsettlers.logic.buildings.Building;
 import jsettlers.logic.buildings.IBuildingsGrid;
-import jsettlers.logic.buildings.military.occupying.IOccupyableBuilding;
 import jsettlers.logic.buildings.military.occupying.OccupyingBuilding;
 import jsettlers.logic.buildings.stack.IRequestsStackGrid;
 import jsettlers.logic.buildings.stack.multi.StockSettings;
@@ -130,7 +130,6 @@ import jsettlers.logic.movable.interfaces.IAttackable;
 import jsettlers.logic.movable.interfaces.IAttackableMovable;
 import jsettlers.logic.movable.interfaces.IFerryMovable;
 import jsettlers.logic.movable.interfaces.ILogicMovable;
-import jsettlers.logic.movable.interfaces.ISoldierMovable;
 import jsettlers.logic.objects.arrow.ArrowObject;
 import jsettlers.logic.objects.stack.StackMapObject;
 import jsettlers.logic.player.Player;
@@ -351,10 +350,9 @@ public final class MainGrid implements Serializable {
 
 			Building building = constructBuildingAt(pos, buildingObject.getType(), player, true);
 
-			if(building instanceof IOccupyableBuilding) {
-				IOccupyableBuilding occupyableBuilding = (IOccupyableBuilding) building;
-				ISoldierMovable soldier = (ISoldierMovable) Movable.createMovable(EMovableType.SWORDSMAN_L1, building.getPlayer(), building.getDoor(), movablePathfinderGrid);
-				occupyableBuilding.requestSoldier(soldier);
+			if (building instanceof OccupyingBuilding) {
+				List<EMovableType> garrison = buildingObject.getInitialGarrison();
+				((OccupyingBuilding) building).initializeGarrison(garrison != null ? garrison : List.of(EMovableType.SWORDSMAN_L1));
 			}
 		} else if (object instanceof MovableObject) {
 			MovableObject movableObject = (MovableObject) object;

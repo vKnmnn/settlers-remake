@@ -15,6 +15,10 @@
 package jsettlers.logic.map.loading.original;
 
 import java.util.BitSet;
+import java.util.ArrayList;
+import java.util.List;
+
+import jsettlers.common.movable.EMovableType;
 
 import jsettlers.algorithms.datastructures.TrackingArray;
 import jsettlers.algorithms.partitions.IBlockingProvider;
@@ -173,7 +177,19 @@ public class OriginalMapFileContent implements IMutableMapData {
 		if (mapBuildingType == EOriginalMapBuildingType.NOT_A_BUILDING)
 			return;
 		if (mapBuildingType.getValue() != null) {
-			setMapObject(x, y, new BuildingMapDataObject(mapBuildingType.getValue(), (byte) party));
+			List<EMovableType> garrison = new ArrayList<>();
+			EMovableType[] soldierTypes = {
+				EMovableType.SWORDSMAN_L1, EMovableType.SWORDSMAN_L2, EMovableType.SWORDSMAN_L3,
+				EMovableType.BOWMAN_L1, EMovableType.BOWMAN_L2, EMovableType.BOWMAN_L3,
+				EMovableType.PIKEMAN_L1, EMovableType.PIKEMAN_L2, EMovableType.PIKEMAN_L3
+			};
+			int[] counts = { countSword1, countSword2, countSword3, countArcher1, countArcher2,
+				countArcher3, countSpear1, countSpear2, countSpear3 };
+			for (int i = 0; i < counts.length; i++) {
+				if (counts[i] < 0 || counts[i] > 15) throw new IllegalArgumentException("Invalid garrison count: " + counts[i]);
+				for (int j = 0; j < counts[i]; j++) garrison.add(soldierTypes[i]);
+			}
+			setMapObject(x, y, new BuildingMapDataObject(mapBuildingType.getValue(), (byte) party, garrison));
 		}
 	}
 

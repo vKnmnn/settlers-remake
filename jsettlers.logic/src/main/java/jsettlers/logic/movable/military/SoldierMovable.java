@@ -74,14 +74,7 @@ public abstract class SoldierMovable extends AttackableHumanMovable implements I
 								condition(mov -> mov.building.getDoor().equals(mov.position)),
 								goToPos(mov -> mov.building.getDoor(), mov -> mov.building.getPlayer() == mov.player && !mov.building.isDestroyed())
 							),
-							hide(),
-							action(mov -> {
-								OccupierPlace place = mov.building.addSoldier(mov);
-								mov.setPosition(place.getPosition().calculatePoint(mov.building.getPosition()));
-
-								if (mov.isBowman()) mov.inTowerAttackPosition = mov.building.getTowerBowmanSearchPosition(place);
-								mov.isInTower = true;
-							})
+							action(SoldierMovable::enterAssignedTower)
 						)
 					)
 				),
@@ -290,6 +283,18 @@ public abstract class SoldierMovable extends AttackableHumanMovable implements I
 	protected abstract short getMinSearchDistance();
 
 	protected abstract short getMaxSearchDistance();
+
+	/** Enters a previously assigned tower from its door, also used for initial map garrisons. */
+	public void enterAssignedTower() {
+		if (building == null || isInTower || !building.getDoor().equals(position)) {
+			throw new IllegalStateException("Soldier must be at the assigned tower's door");
+		}
+		setVisible(false);
+		OccupierPlace place = building.addSoldier(this);
+		setPosition(place.getPosition().calculatePoint(building.getPosition()));
+		if (isBowman()) inTowerAttackPosition = building.getTowerBowmanSearchPosition(place);
+		isInTower = true;
+	}
 
 	@Override
 	public boolean moveToTower(IOccupyableBuilding building) {

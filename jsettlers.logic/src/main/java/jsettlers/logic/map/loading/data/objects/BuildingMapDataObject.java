@@ -14,16 +14,30 @@
  */
 package jsettlers.logic.map.loading.data.objects;
 
+import java.util.List;
+
 import jsettlers.common.buildings.EBuildingType;
+import jsettlers.common.movable.EMovableType;
 
 public class BuildingMapDataObject implements MapDataObject, IPlayerIdProvider {
 
 	private final EBuildingType type;
 	private final byte playerId;
+	private final List<EMovableType> initialGarrison;
 
 	public BuildingMapDataObject(EBuildingType type, byte playerId) {
+		this(type, playerId, null);
+	}
+
+	/** Null retains the native map default; an empty list explicitly leaves the building unoccupied. */
+	public BuildingMapDataObject(EBuildingType type, byte playerId, List<EMovableType> initialGarrison) {
+		this.initialGarrison = initialGarrison == null ? null : List.copyOf(initialGarrison);
 		this.type = type;
 		this.playerId = playerId;
+	}
+
+	public List<EMovableType> getInitialGarrison() {
+		return initialGarrison;
 	}
 
 	public EBuildingType getType() {

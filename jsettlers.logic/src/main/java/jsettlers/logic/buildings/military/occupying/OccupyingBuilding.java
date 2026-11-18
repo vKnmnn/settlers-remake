@@ -50,6 +50,8 @@ import jsettlers.logic.buildings.IBuildingsGrid;
 import jsettlers.logic.constants.Constants;
 import jsettlers.logic.constants.MatchConstants;
 import jsettlers.logic.map.grid.movable.MovableGrid;
+import jsettlers.logic.movable.Movable;
+import jsettlers.logic.movable.military.SoldierMovable;
 import jsettlers.logic.movable.interfaces.AbstractMovableGrid;
 import jsettlers.logic.movable.interfaces.IAttackable;
 import jsettlers.logic.movable.interfaces.IAttackableMovable;
@@ -466,6 +468,31 @@ public class OccupyingBuilding extends Building implements IBuilding.IOccupied, 
 
 		soldier.moveToTower(this);
 		comingSoldiers.put(soldier, new SoldierRequest(soldierClass, emptyPlace));
+	}
+
+	/** Initializes an original map's exact garrison, without the normal default soldier search. */
+	public void initializeGarrison(List<EMovableType> soldiers) {
+		if (!sortedOccupiers.isEmpty() || !comingSoldiers.isEmpty()) {
+			throw new IllegalStateException("Garrison already initialized at " + pos);
+		}
+		List<OccupierPlace> available = new LinkedList<>(Arrays.asList(getBuildingVariant().getOccupierPlaces()));
+		List<OccupierPlace> assigned = new LinkedList<>();
+		for (EMovableType soldier : soldiers) {
+			OccupierPlace place = available.stream()
+				.filter(candidate -> EMovableType.SOLDIERS.contains(soldier) && candidate.getSoldierClass() == soldier.getSoldierClass())
+				.findFirst().orElseThrow(() -> new IllegalArgumentException(
+					"Garrison exceeds " + type + " capacity for " + soldier + " at " + pos));
+			available.remove(place);
+			assigned.add(place);
+		}
+		resetSoldierSearch();
+		emptyPlaces.addAll(available);
+		for (int i = 0; i < soldiers.size(); i++) {
+			SoldierMovable soldier = (SoldierMovable) Movable.createMovable(soldiers.get(i), getPlayer(), getDoor(), grid.getMovableGrid());
+			soldier.moveToTower(this);
+			comingSoldiers.put(soldier, new SoldierRequest(soldier.getMovableType().getSoldierClass(), assigned.get(i)));
+			soldier.enterAssignedTower();
+		}
 	}
 
 	public void requestFullSoldiers() {
