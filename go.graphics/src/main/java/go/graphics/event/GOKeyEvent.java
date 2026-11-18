@@ -14,6 +14,10 @@
  *******************************************************************************/
 package go.graphics.event;
 
+import java.util.EnumSet;
+import java.util.Set;
+import go.graphics.event.command.EModifier;
+
 /**
  * This is a go key event.
  * 
@@ -22,6 +26,7 @@ package go.graphics.event;
  */
 public class GOKeyEvent extends SingleHandlerGoEvent {
 	private final String keyCode;
+	private final Set<EModifier> modifiers;
 
 	/**
 	 * Creates a new key event for a given key code.
@@ -30,8 +35,19 @@ public class GOKeyEvent extends SingleHandlerGoEvent {
 	 *            The key code.
 	 */
 	public GOKeyEvent(String keyCode) {
-		this.keyCode = keyCode;
+		this(keyCode, EnumSet.noneOf(EModifier.class));
 	}
+
+	/** Captures modifiers when the key is pressed, independently of later modifier releases. */
+	public GOKeyEvent(String keyCode, Set<EModifier> modifiers) {
+		this.keyCode = keyCode;
+		this.modifiers = EnumSet.noneOf(EModifier.class);
+		this.modifiers.addAll(modifiers);
+	}
+
+	public boolean isAltDown() { return modifiers.contains(EModifier.ALT); }
+	public boolean isControlDown() { return modifiers.contains(EModifier.CTRL); }
+	public boolean isShiftDown() { return modifiers.contains(EModifier.SHIFT); }
 
 	/**
 	 * Gets the key code the event has.

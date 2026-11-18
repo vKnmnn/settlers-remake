@@ -160,6 +160,7 @@ public class GOSwingEventConverter extends AbstractEventConverter
 	@Override
 	public void keyPressed(KeyEvent e) {
 		updateModifiers(e);
+		if (isModifierKey(e)) return;
 		String text = getKeyName(e);
 		startKeyEvent(text);
 		/*
@@ -173,6 +174,19 @@ public class GOSwingEventConverter extends AbstractEventConverter
 		 * 
 		 * ongoingKeyEvent.started(); }
 		 */
+	}
+
+	private boolean isModifierKey(KeyEvent event) {
+		switch (event.getKeyCode()) {
+		case KeyEvent.VK_ALT:
+		case KeyEvent.VK_ALT_GRAPH:
+		case KeyEvent.VK_CONTROL:
+		case KeyEvent.VK_SHIFT:
+		case KeyEvent.VK_META:
+			return true;
+		default:
+			return false;
+		}
 	}
 
 	private String getKeyName(KeyEvent e) {
@@ -261,6 +275,7 @@ public class GOSwingEventConverter extends AbstractEventConverter
 	@Override
 	public void keyReleased(KeyEvent e) {
 		updateModifiers(e);
+		if (isModifierKey(e)) return;
 		endKeyEvent(getKeyName(e));
 	}
 
@@ -310,19 +325,19 @@ public class GOSwingEventConverter extends AbstractEventConverter
 	}
 
 	private void updateModifiers(InputEvent e) {
-		modifiers = e.getModifiers();
+		modifiers = e.getModifiersEx();
 	}
 	
 	@Override
 	protected Set<EModifier> getCurrentModifiers() {
 		EnumSet<EModifier> set = EnumSet.noneOf(EModifier.class);
-		if ((modifiers & (InputEvent.CTRL_DOWN_MASK | InputEvent.CTRL_MASK)) != 0) {
+		if ((modifiers & InputEvent.CTRL_DOWN_MASK) != 0) {
 			set.add(EModifier.CTRL);
 		}
-		if ((modifiers & (InputEvent.ALT_DOWN_MASK | InputEvent.ALT_MASK)) != 0) {
+		if ((modifiers & (InputEvent.ALT_DOWN_MASK | InputEvent.ALT_GRAPH_DOWN_MASK)) != 0) {
 			set.add(EModifier.ALT);
 		}
-		if ((modifiers & (InputEvent.SHIFT_DOWN_MASK | InputEvent.SHIFT_MASK)) != 0) {
+		if ((modifiers & InputEvent.SHIFT_DOWN_MASK) != 0) {
 			set.add(EModifier.SHIFT);
 		}
 		return set;

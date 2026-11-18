@@ -161,23 +161,20 @@ public class GLFWContextCreator extends AsyncContextCreator {
 
 		private final EnumSet<EModifier> activeMods = EnumSet.noneOf(EModifier.class);
 
-		private GLFWKeyCallbackI key_callback = (window, key, scancode, action, modsUNUSUED) -> {
+		private GLFWKeyCallbackI key_callback = (window, key, scancode, action, modifierMask) -> {
 			String name = GLFW.glfwGetKeyName(key, scancode);
 			if(name == null) {
 				name = keys.get(key);
 			}
 
-			EModifier mod = mods.get(key);
-
-			if(mod != null) {
-				synchronized (activeMods) {
-					if(action == GLFW.GLFW_PRESS) {
-						activeMods.add(mod);
-					} else {
-						activeMods.remove(mod);
-					}
-				}
+			synchronized (activeMods) {
+				activeMods.clear();
+				if ((modifierMask & GLFW.GLFW_MOD_ALT) != 0) activeMods.add(EModifier.ALT);
+				if ((modifierMask & GLFW.GLFW_MOD_CONTROL) != 0) activeMods.add(EModifier.CTRL);
+				if ((modifierMask & GLFW.GLFW_MOD_SHIFT) != 0) activeMods.add(EModifier.SHIFT);
 			}
+			// Modifier presses must not occupy the single active key-event slot.
+			if (mods.containsKey(key)) return;
 
 			if(action == GLFW.GLFW_PRESS) {
 				startKeyEvent(name);

@@ -210,8 +210,8 @@ public class AbstractEventConverter {
 	}
 
 	protected synchronized void startKeyEvent(String string) {
-		if (ongoingKeyEvent == null) {
-			ongoingKeyEvent = new GOKeyEvent(string);
+		if (string != null && ongoingKeyEvent == null) {
+			ongoingKeyEvent = new GOKeyEvent(string, getCurrentModifiers());
 			replaceKeyEvent(ongoingKeyEvent);
 			handleEvent(ongoingKeyEvent);
 			ongoingKeyEvent.started();
@@ -219,7 +219,7 @@ public class AbstractEventConverter {
 	}
 
 	protected synchronized void endKeyEvent(String string) {
-		if (ongoingKeyEvent != null) {
+		if (ongoingKeyEvent != null && ongoingKeyEvent.getKeyCode().equals(string)) {
 			ongoingKeyEvent.released();
 			ongoingKeyEvent = null;
 		}
