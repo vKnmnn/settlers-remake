@@ -10,6 +10,8 @@ Integration branch: `integration/fork-improvements`.
 - BotGGias `5ece051ea6`: production statistics and initial mission-goal support.
   Original goods goals now check current owned stacks rather than lifetime production.
   Resolved Player.java context without importing the unrelated peace-time field.
+- TheRealDrNick `ea94716c6`: take stolen goods on arrival before the animation,
+  preventing carriers from removing them during the animation delay.
 - TheRealDrNick `464384b43`: write logs/replays under application configuration
   directory and continue with console logging if log-file creation fails.
 - Selected portions of BotGGias `fbd1186681`: fog-of-war save lock, pause-state
@@ -32,7 +34,7 @@ Integration branch: `integration/fork-improvements`.
 
 JDK 21.0.13.1, Linux. Desktop release and unit tests passed.
 Common: 936 cases, 157 skipped; graphics: 9 passed; network: 74 cases,
-19 skipped; logic: 74 passed (including original mission/garrison import, mage save and marker-cleanup regressions). Save/load/save integration: 1 passed.
+19 skipped; logic: 78 passed (including thief, original mission/garrison import, mage save and marker-cleanup regressions). Save/load/save integration: 1 passed.
 Existing skipped tests are not counted as successful coverage.
 
 Resource initialization with the local original installation completed and
@@ -53,8 +55,8 @@ integration test also passed after the mage and GFX fixes.
   save-version compatibility policy and deterministic replay corpus.
 - szusik multiplayer resume and selection groups;
   review protocol and save-format dependencies first.
-- TheRealDrNick soldier-order and thief fixes, then naval/colonization AI with
-  deterministic runs and balance tests.
+- TheRealDrNick soldier-order fixes require synchronized command ownership first
+  (see review below). Naval/colonization AI needs deterministic runs and balance tests.
 - BotGGias spells, multiplayer synchronization, siege weapons, map decoration
   and UI additions: review separately, with feature-specific tests.
 - Android and macOS validation remain separate work items.
@@ -207,3 +209,31 @@ After the mission/garrison changes, all 74 logic unit tests, the save/load/save
 integration test and `releaseJSettlers` passed. A repeated read-only audit of the
 178 installed original maps found all 610 military-building garrisons within
 the corrected class capacities. This data audit is not a full gameplay test.
+
+### Soldier-order fork review
+
+Do not directly cherry-pick `2269db784`, `f031f9c8a` or `f0d91c9ec`.
+They gate pursuit changes on `Player.getPlayerType() == HUMAN`, but `playerType`
+is transient and `MultiplayerGame.determinePlayerSettings` assigns all remote
+slots HUMAN on clients while the host retains AI types. This distinction keeps
+AI execution on the host. Using it to change soldier simulation would let the
+same command behave differently on host and client. A synchronized distinction
+between manual and AI commands needs its own protocol/replay compatibility plan.
+
+The latter two commits also introduce a pursuit radius of 20, a fork design
+choice not verified against the original. Required tests include retreat under
+pursuit, host/client equality for AI commands, tower-entry priority, distant
+attack targets, patrol, and save/load. No soldier-order behavior was changed by
+this review.
+
+### Thief regression validation
+
+The arrival tests use the actual thief behavior and map stacks, isolating arrival
+from target pathfinding. They verify that goods are held when the animation
+starts, cannot also be taken by another carrier/thief, survive save/load exactly
+once, and cannot be stolen from the thief's own territory. The two original
+regressions fail against the pre-fix code with GOLD expected but NO_MATERIAL held;
+they pass after the upstream fix. Interactive delivery over a full route remains
+a separate gameplay check.
+
+After the thief fix, all 78 logic unit tests and `releaseJSettlers` passed.
