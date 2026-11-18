@@ -284,3 +284,14 @@ non-integration test tasks. `releaseJSettlers` produced the playable archive.
 Headless rendered previews of both statistics views were inspected. A complete
 interactive match and multiplayer session have not been played through for this
 change.
+
+### Responsive measured speed display
+
+The top-right measured game-speed indicator previously averaged 19 stale,
+roughly one-second measurements. These overlapping windows kept the F12 burst
+visible long after simulation returned to normal. It now measures elapsed game
+versus monotonic real time in non-overlapping 250 ms intervals. Rendering delays
+use their actual elapsed duration; clock resets cannot produce negative speeds.
+Deterministic tests cover fast-forward followed by normal speed, pause/resume,
+50 ms simulation ticks, delayed rendering and clock resets. The speed setting
+and F12 simulation behavior are unchanged.

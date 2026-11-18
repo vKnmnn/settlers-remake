@@ -1,48 +1,42 @@
 package jsettlers.common.statistics;
 
+import java.util.function.LongSupplier;
 import java.util.function.Supplier;
 
+/** Measures elapsed target time per real time over non-overlapping intervals. */
 public class IntervalTimeRateCalculator {
 	private final long interval;
+	private final Supplier<Long> targetTime;
+	private final LongSupplier realTime;
+	private long previousRealTime;
+	private long previousTargetTime;
+	private float rate;
 
-	private final TimeRateCalculator[] calculators;
+	public IntervalTimeRateCalculator(long interval, Supplier<Long> targetTime) {
+		this(interval, targetTime, System::nanoTime);
+	}
 
-	private int index = 0;
-
-	private long prevTime;
-
-	public IntervalTimeRateCalculator(long interval, int calculatorCount, Supplier<Long> getTargetTime) {
+	IntervalTimeRateCalculator(long interval, Supplier<Long> targetTime, LongSupplier realTime) {
+		if (interval <= 0) throw new IllegalArgumentException("Non-positive measurement interval");
 		this.interval = interval;
-
-		calculators = new TimeRateCalculator[calculatorCount];
-		for(int i = 0; i < calculatorCount; i++) {
-			calculators[i] = new TimeRateCalculator(getTargetTime);
-		}
-
-		prevTime = System.nanoTime();
+		this.targetTime = targetTime;
+		this.realTime = realTime;
+		previousRealTime = realTime.getAsLong();
+		previousTargetTime = targetTime.get();
 	}
 
 	public void tick() {
-		long newTime = System.nanoTime();
-
-		if(prevTime + interval > newTime) return;
-		prevTime = newTime;
-
-		index++;
-		index %= calculators.length;
-
-		calculators[index].tick();
+		long now = realTime.getAsLong();
+		long elapsed = now - previousRealTime;
+		if (elapsed < interval) return;
+		long target = targetTime.get();
+		// A restored or reset clock must not produce a negative speed.
+		rate = (float) (Math.max(0L, target - previousTargetTime) / (double) elapsed);
+		previousRealTime = now;
+		previousTargetTime = target;
 	}
 
 	public float getRate() {
-		float average = 0;
-
-		for(int i = 0; i < calculators.length; i++) {
-			if(i == index) continue;
-
-			average += calculators[i].getRate();
-		}
-
-		return average / (calculators.length-1);
+		return rate;
 	}
 }

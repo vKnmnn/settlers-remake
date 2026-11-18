@@ -271,7 +271,7 @@ public final class MapContent implements RegionContent, IMapInterfaceListener, A
 		height = map.getHeight();
 		this.localPlayer = game.getInGamePlayer();
 		this.gameTimeProvider = game.getGameTimeProvider();
-		this.gamespeedCalculator = new IntervalTimeRateCalculator(50*1000*1000L, 20, this::getGameTimeNS);
+		this.gamespeedCalculator = new IntervalTimeRateCalculator(250_000_000L, this::getGameTimeNS);
 		this.textDrawPosition = textDrawPosition;
 		this.messenger = new Messenger(this.gameTimeProvider);
 		this.textDrawer = new ReplaceableTextDrawer();
