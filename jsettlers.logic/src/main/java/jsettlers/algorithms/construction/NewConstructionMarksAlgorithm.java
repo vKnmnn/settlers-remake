@@ -41,6 +41,9 @@ public final class NewConstructionMarksAlgorithm {
 			removeConstructionMarks(lastArea, mapArea);
 		}
 
+		// Track partial results too, so a failed calculation can still be cleared.
+		lastArea = mapArea;
+
 		boolean binaryConstructionMarkValues = !buildingVariant.needsFlattenedGround();
 		RelativePoint[] buildingArea = buildingVariant.getBuildingArea();
 
@@ -64,8 +67,6 @@ public final class NewConstructionMarksAlgorithm {
 			}
 		}
 
-		// set the lastArea variable for the next run
-		lastArea = mapArea;
 	}
 
 	/**
