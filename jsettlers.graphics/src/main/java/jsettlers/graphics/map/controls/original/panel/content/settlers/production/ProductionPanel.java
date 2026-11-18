@@ -15,6 +15,13 @@
 package jsettlers.graphics.map.controls.original.panel.content.settlers.production;
 
 import go.graphics.text.EFontSize;
+import go.graphics.GLDrawContext;
+import java.util.Optional;
+import java.text.NumberFormat;
+import jsettlers.common.action.Action;
+import jsettlers.common.player.ProductionHistory;
+import jsettlers.graphics.action.ExecutableAction;
+import jsettlers.graphics.ui.LabeledButton;
 import jsettlers.common.material.EMaterialType;
 import jsettlers.common.player.IInGamePlayer;
 import jsettlers.common.player.IProductionStatistic;
@@ -30,7 +37,7 @@ import jsettlers.graphics.ui.UIPanel;
 import jsettlers.graphics.ui.layout.ProductionStatisticLayout;
 
 /**
- * This panel displays the amount of materials the player has produced since the start of the game.
+ * Production totals with a locally selected material and simulation-time history.
  */
 public class ProductionPanel extends AbstractContentProvider {
 
@@ -85,22 +92,95 @@ public class ProductionPanel extends AbstractContentProvider {
 		}
 	}
 
-	private final UIPanel panel;
+	private static final int[] WINDOWS_MINUTES = {15, 30, 60};
+	private final UIPanel overview;
+	private final UIPanel detail = new UIPanel();
+	private volatile boolean showingDetail;
+	private volatile EMaterialType selectedMaterial = EMaterialType.PLANK;
+	private volatile int windowMinutes = WINDOWS_MINUTES[0];
+	private volatile IProductionStatistic statistic;
+	private final ProductionGraph graph = new ProductionGraph();
+	private final Label materialName = new Label("", EFontSize.NORMAL);
+	private final Label total = new Label("", EFontSize.SMALL);
+	private final Label interval = new Label("", EFontSize.SMALL);
+	private final Label notice = new Label("", EFontSize.SMALL);
+	private final UIPanel panel = new UIPanel() {
+		private UIPanel current() { return showingDetail ? detail : overview; }
+		@Override public void drawAt(GLDrawContext gl) {
+			UIPanel current = current();
+			current.setPosition(getPosition());
+			current.drawAt(gl);
+		}
+		@Override public Optional<Action> getAction(float x, float y) { return current().getAction(x, y); }
+		@Override public String getDescription(float x, float y) { return current().getDescription(x, y); }
+		@Override public void onAttach() { overview.onAttach(); detail.onAttach(); }
+		@Override public void onDetach() { overview.onDetach(); detail.onDetach(); }
+	};
 	private final UiPlayerDependingContentUpdater<IProductionStatistic> uiContentUpdater = new UiPlayerDependingContentUpdater<>(
 			IInGamePlayer::getProductionStatistic);
 
 	public ProductionPanel() {
-		panel = new ProductionStatisticLayout()._root;
+		overview = new ProductionStatisticLayout()._root;
 
 		// noinspection unchecked
-		panel.getChildren().stream()
+		overview.getChildren().stream()
 				.filter(c -> c instanceof IUiContentReceiver)
 				.map(c -> (IUiContentReceiver<IProductionStatistic>) c)
 				.forEach(uiContentUpdater::addListener);
+		for (var child : overview.getChildren()) {
+			if (child instanceof ProducedMaterialButton) {
+				ProducedMaterialButton button = (ProducedMaterialButton) child;
+				button.setAction(localAction(() -> {
+					selectedMaterial = button.material;
+					showingDetail = true;
+					refreshDetail();
+				}));
+			}
+		}
+		detail.addChild(materialName, 0, .90f, 1, 1);
+		detail.addChild(total, 0, .83f, 1, .90f);
+		detail.addChild(interval, 0, .72f, 1, .83f);
+		detail.addChild(graph, 0, .29f, 1, .71f);
+		detail.addChild(notice, 0, .16f, 1, .28f);
+		for (int i = 0; i < WINDOWS_MINUTES.length; i++) {
+			int minutes = WINDOWS_MINUTES[i];
+			LabeledButton button = new LabeledButton(minutes + " min", localAction(() -> {
+				windowMinutes = minutes;
+				refreshDetail();
+			}), EFontSize.SMALL) {
+				@Override public void drawAt(GLDrawContext gl) {
+					setActive(windowMinutes == minutes);
+					super.drawAt(gl);
+				}
+			};
+			detail.addChild(button, i / 3f, .08f, (i + 1) / 3f, .16f);
+		}
+		detail.addChild(new LabeledButton(Labels.getString("production_history_overview"),
+				localAction(() -> showingDetail = false), EFontSize.SMALL), 0, 0, 1, .08f);
+		uiContentUpdater.addListener(value -> { statistic = value; refreshDetail(); });
 	}
 
 	public void setPlayer(IInGamePlayer player) {
+		statistic = player == null ? null : player.getProductionStatistic();
 		uiContentUpdater.updatePlayer(player);
+		refreshDetail();
+	}
+
+	private static ExecutableAction localAction(Runnable action) {
+		return new ExecutableAction() { @Override public void execute() { action.run(); } };
+	}
+
+	private synchronized void refreshDetail() {
+		EMaterialType material = selectedMaterial;
+		IProductionStatistic current = statistic;
+		materialName.setText(Labels.getName(material, true));
+		total.setText(Labels.getString("production_history_total") + ": " +
+				(current == null ? 0 : current.getAmountProduced(material)));
+		ProductionHistory history = current == null ? null : current.getHistory(material, windowMinutes);
+		graph.setHistory(history, windowMinutes);
+		interval.setText(history == null ? "" : Labels.getString("production_history_interval",
+				NumberFormat.getNumberInstance().format(history.getBucketMillis() / 1000d)));
+		notice.setText(Labels.getString("production_history_partial"));
 	}
 
 	@Override
