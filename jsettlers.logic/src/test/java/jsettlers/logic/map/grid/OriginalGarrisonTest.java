@@ -41,20 +41,19 @@ public class OriginalGarrisonTest {
     }
 
     @Test
-    public void originalCastleRetainsSoldierTypesAndLevelsAcrossCivilisations() {
+    public void fullOriginalCastleRetainsAllSoldierTypesAndLevelsAcrossCivilisations() {
         for (ECivilisation civilisation : ECivilisation.values()) {
             OriginalMapFileContent content = new OriginalMapFileContent(64);
-            // The Roman remake castle has five infantry slots; the other three have six.
-            int sword2 = civilisation == ECivilisation.ROMAN ? 0 : 1;
             content.setBuilding(32, 32, EOriginalMapBuildingType.CASTLE.ordinal(), 0,
-                    1, sword2, 1, 1, 1, 1, 1, 1, 1);
+                    1, 1, 1, 2, 1, 1, 1, 1, 1);
             OccupyingBuilding castle = load(content, civilisation);
             List<EMovableType> expected = new ArrayList<>(EMovableType.SOLDIERS);
-            if (sword2 == 0) expected.remove(EMovableType.SWORDSMAN_L2);
+            expected.add(EMovableType.BOWMAN_L1);
             assertEquals(civilisation.toString(), counts(expected), counts(castle.getOccupiers().stream()
                     .map(occupier -> occupier.getMovable().getMovableType()).collect(Collectors.toList())));
             assertEquals(0, castle.getSearchedSoldiers(ESoldierClass.INFANTRY));
             assertEquals(0, castle.getComingSoldiers(ESoldierClass.INFANTRY));
+            assertTrue(castle.isSetToBeFullyOccupied());
             assertEquals(expected.size(), castle.getOccupiers().stream().map(occupier -> occupier.getPlace()).distinct().count());
             // Immediate tower placement must not leave a soldier blocking its door.
             MainGrid grid = grids.get(grids.size() - 1);
