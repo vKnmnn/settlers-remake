@@ -7,7 +7,8 @@ Integration branch: `integration/fork-improvements`.
 
 - BotGGias `329fa153fe`: Gradle 8.14.3, updated plugins and CI, JDK 21 build
   with Java 11 bytecode. Desktop validation only; Android migration unverified.
-- BotGGias `5ece051ea6`: production statistics and production mission goals.
+- BotGGias `5ece051ea6`: production statistics and initial mission-goal support.
+  Original goods goals now check current owned stacks rather than lifetime production.
   Resolved Player.java context without importing the unrelated peace-time field.
 - TheRealDrNick `464384b43`: write logs/replays under application configuration
   directory and continue with console logging if log-file creation fails.
@@ -23,7 +24,7 @@ Integration branch: `integration/fork-improvements`.
 - Local GFX parser correction: accept populated header index blocks with
   validated type, size and file bounds. Synthetic fixtures cover both color
   formats and malformed headers without redistributing original assets.
-- Local tests cover production victory thresholds, fog update exclusion during
+- Local tests cover goods victory thresholds, fog update exclusion during
   saving, and incomplete savegame rejection. Desktop CI explicitly opts out of
   Android, uploads test reports, and runs a save/load round trip.
 
@@ -31,7 +32,7 @@ Integration branch: `integration/fork-improvements`.
 
 JDK 21.0.13.1, Linux. Desktop release and unit tests passed.
 Common: 936 cases, 157 skipped; graphics: 9 passed; network: 74 cases,
-19 skipped; logic: 53 passed (including mage save and marker-cleanup regressions). Save/load/save integration: 1 passed.
+19 skipped; logic: 74 passed (including original mission/garrison import, mage save and marker-cleanup regressions). Save/load/save integration: 1 passed.
 Existing skipped tests are not counted as successful coverage.
 
 Resource initialization with the local original installation completed and
@@ -138,15 +139,11 @@ lifetimes still require narrower comparisons and gameplay observations.
 | Priority | Gap | Code evidence |
 | --- | --- | --- |
 | P1 | Siege workshops/units and powder production are absent from the current model. | `EOriginalMapBuildingType` maps catapult, ballista, cannon, powder and great gong entries to null; corresponding building types are absent. `EOriginalMapSettlersType` also lacks mappings for relevant units. |
-| P1 | Original-map garrison counts are discarded. | `OriginalMapFileContentReader` decodes nine soldier counts and passes them to `OriginalMapFileContent.setBuilding`, which ignores the counts. |
-| P1 | Imported rice liquor and mead stacks disappear. | `EOriginalMapStackType` maps both to null; `OriginalMapFileContent.setStack` skips them despite existing `LIQUOR`/`MEAD` materials. This is an import defect, not missing alcohol production. |
-| P1 | Unsupported mission objectives can be silently omitted. | Building-destruction import and `OriginalSinglePlayerWinCondition.checkProduceCondition` skip null-mapped types. Which installed missions are affected needs a data audit. |
+| P1 | Unsupported mission building types remain unimplemented. | Active unsupported destruction/goods goals now reject import rather than silently dropping requirements. The local audit found no unsupported active goals among 34 mission-condition sections. |
 | P2 | Multiplayer-save listing has a stub. | `MapList.getSavedMultiplayerMaps()` returns null. This alone does not prove that every alternative resume path is absent. |
 | P2 | AI rice-economy planning is incomplete. | `PioneerAi` lacks a swamp-target strategy; `WhatToDoAi` leaves rice-farm work-area adjustment as TODO. Human rice farming exists. |
 
-Unverified: production-goal parsing reads overlapping type/amount bytes in
-`OriginalMapFileContentReader`; verify the map format before changing offsets.
-Comments about original beekeeping rules also need independent verification.
+Comments about original beekeeping rules still need independent verification.
 All four civilisations, the spell enum's cases, ferries and cargo ships already
 exist; their correctness cannot be inferred merely from their presence.
 
@@ -173,3 +170,40 @@ and the desktop release build passed. The 9 graphics tests also passed after
 the exit-dispatch logging change. The three marker regression tests pass on
 the combined branch. Interactive confirmation of the reported symptoms is
 still required.
+
+### Original mission and garrison import corrections
+
+- Rice liquor (ID 33) and mead (ID 34) now retain their stacks on import.
+- WIN_COND goods records contain a two-byte little-endian target followed by a
+  material byte. Previously the upper amount byte was mistaken for the material.
+  Synthetic encrypted-resource tests cover this layout, unused slots, truncated
+  data and unsupported active requirements. The installed-map audit found eight
+  active goods missions among 34 condition sections in 178 map files.
+- Local original executable analysis of `FUN_005145c0` shows goods quantities
+  summed from current owner-associated goods records. The remake now counts
+  actual stacks on player-zero territory, including reserved goods still present,
+  rather than cumulative production or unreserved transport offers. Exact cargo
+  and in-transit equivalence has not been established. Existing saves containing
+  previously misparsed objectives cannot reconstruct the original target; start
+  the original map again to obtain corrected requirements.
+- `FUN_004fd540` distinguishes building-record byte 6: mode 0 creates one level-one
+  swordsman and ignores packed counts, mode 1 uses nine soldier-type/level counts,
+  and other values create no soldiers. Tests exercise map versions 10 and 11 and
+  reject truncated/overflowing building records. The local audit found 260 default
+  and 350 explicit military-building records. With mode decoding all fit the
+  original class capacities (small tower 1 infantry/2 archers, large tower 3/3,
+  castle 6/4).
+- Imported garrisons now initialize inside their buildings, retaining types and
+  levels; explicit empty garrisons stay empty. Native maps retain their default
+  swordsman. Capacity is checked before soldiers are created, and regression
+  tests cover initialization and save/load. The Roman castle now has 6 infantry
+  and 4 archer slots instead of 5/6. Its added infantry sprite position is derived
+  from the visible window; exact original rendering coordinates remain unverified.
+
+Decompiler function addresses refer to the locally analyzed S3.EXE identified
+above. Original binaries, graphics and decompiled source are not redistributed.
+
+After the mission/garrison changes, all 74 logic unit tests, the save/load/save
+integration test and `releaseJSettlers` passed. A repeated read-only audit of the
+178 installed original maps found all 610 military-building garrisons within
+the corrected class capacities. This data audit is not a full gameplay test.
