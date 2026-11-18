@@ -237,3 +237,50 @@ they pass after the upstream fix. Interactive delivery over a full route remains
 a separate gameplay check.
 
 After the thief fix, all 78 logic unit tests and `releaseJSettlers` passed.
+
+### Original end-of-game and production statistics
+
+Local Ghidra analysis of the same S3.EXE established the following behavior:
+
+- `00491820` builds the endgame dialog with resource IDs `0x900c2..0x900cb`.
+  The installed language resource resolves these to Player, Points, Settlers,
+  Buildings, Food, Mines, Gold, Mana, Soldiers, Battles. Buildings counts consumed
+  construction materials, Food counts meals consumed by mines, and Mines counts
+  extracted resources. The UI explains these meanings in column tooltips.
+- `004e05e0` and state 100 in `004e9670` count births from houses and priests.
+  Recruitment and combat are separate counters; initial units and transformations
+  do not count as births. `0050e9f0` credits kills (one point per normal unit;
+  the original's five-point catapult has no implemented counterpart here).
+- `0053e720` computes points as `5*battles + 2*(soldiers + settlers) + mana +
+  minedResources + mineFood + constructionMaterials + weightedGold`, then halves
+  weighted gold for display. Gold production contributes one weight point for
+  Egyptians and two for other civilizations; `004fa220` gives Egyptians four
+  additional weight points per mined gem. The remake keeps the stored gold counter intact so
+  reopening results does not alter it. New counters use long integers. Older
+  saves cannot reconstruct missing lifetime events: they show a notice and no
+  aggregate score, while known legacy totals remain available.
+- `004ff470` shifts 256 production samples for each good; `004e7810` invokes it
+  every 220 ticks. The simulation tick is 64 ms, giving 14.08 seconds per sample
+  and approximately one hour of history. Worker completion calls to `004ff510`
+  establish that this records production, not current warehouse inventory.
+- `004ff4c0` supplies a centered 13-sample smoothing kernel
+  `[3,6,8,9,9,10,10,10,9,9,8,6,3]`. Unlike the original `004ff550`, the remake
+  divides by the actual participating weights (110 in the interior) and does not
+  reproduce the original 100-item sample cap or biased normalization.
+
+A local victory/defeat now opens results automatically once, with options to
+continue observing or leave directly. This does not stop the shared simulation.
+The regular exit screen also displays the expanded results. Selecting a material
+in production statistics opens its history with 15/30/60-minute windows. History
+uses simulation time, survives saves, and is bounded to 256 samples per material.
+Missing pre-load history is shaded rather than reconstructed from totals; the
+latest interval is explicitly marked as incomplete. Opening or changing graphs
+has no simulation or network side effects. Original assets and decompiled source
+remain outside the repository.
+
+Validation after integration: 94 logic unit tests, 16 graphics tests and six
+Swing tests passed, as did the save/load/save integration test and the remaining
+non-integration test tasks. `releaseJSettlers` produced the playable archive.
+Headless rendered previews of both statistics views were inspected. A complete
+interactive match and multiplayer session have not been played through for this
+change.
