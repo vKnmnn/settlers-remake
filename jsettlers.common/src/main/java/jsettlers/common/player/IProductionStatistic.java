@@ -27,4 +27,7 @@ public interface IProductionStatistic {
 	 * @return The amount of the given material produced by the player since the start of the game.
 	 */
 	int getAmountProduced(EMaterialType materialType);
+
+	/** Snapshot over the requested window, using simulation time rather than wall time. */
+	ProductionHistory getHistory(EMaterialType materialType, int windowMinutes);
 }
