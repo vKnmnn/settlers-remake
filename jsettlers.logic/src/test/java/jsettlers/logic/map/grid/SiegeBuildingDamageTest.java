@@ -68,12 +68,14 @@ public class SiegeBuildingDamageTest {
     }
 
     @Test public void gongDestroysItsCivilianTargetWithoutHurtingNearbySettlers() {
+        original.landscapeGrid.generateBlockedPartitions();
         ShortPoint2D targetPosition = new ShortPoint2D(16, 12);
         Building target = original.constructBuildingAt(targetPosition, EBuildingType.LUMBERJACK,
                 original.getPartitionsGrid().getPlayer((byte) 1), true);
         ShortPoint2D gongPosition = HexGridArea.stream(targetPosition.x, targetPosition.y, 3, 5)
                 .filterBounds(original.width, original.height)
                 .filter((x, y) -> !original.movablePathfinderGrid.isBlockedOrProtected(x, y))
+                .filter((x, y) -> original.movablePathfinderGrid.canSpawnAt(EMovableType.GONG, original.getPartitionsGrid().getPlayer((byte) 0), new ShortPoint2D(x, y)))
                 .getFirst().get();
         Movable gong = Movable.createMovable(EMovableType.GONG, original.getPartitionsGrid().getPlayer((byte) 0), gongPosition,
                 original.movablePathfinderGrid);

@@ -37,9 +37,6 @@ import static jsettlers.algorithms.simplebehaviortree.BehaviorTreeHelper.*;
 public class SiegeEngineerMovable extends BuildingWorkerMovable {
 	private static final long serialVersionUID = -2270986125497352411L;
 
-	private static final short WORK_STEP_DURATION = 750;
-	private static final int ASSEMBLY_STEPS_PER_JOB = 4;
-	private static final int AMMO_PRODUCTION_DURATION = 4000;
 
 	private ESiegeWorkshopJob job = ESiegeWorkshopJob.NONE;
 	private EMaterialType fetchMaterial = null;
@@ -68,12 +65,7 @@ public class SiegeEngineerMovable extends BuildingWorkerMovable {
 							sequence(
 								condition(mov -> mov.job == ESiegeWorkshopJob.ASSEMBLE_WEAPON),
 								goToAnvil(),
-								repeatLoop(ASSEMBLY_STEPS_PER_JOB,
-									sequence(
-										playAction(EMovableAction.ACTION1, WORK_STEP_DURATION),
-										action(mov -> mov.getWorkshop().workOnWeapon())
-									)
-								)
+								action(mov -> mov.getWorkshop().workOnWeapon())
 							),
 							sequence(
 								condition(mov -> mov.job == ESiegeWorkshopJob.FETCH_WEAPON_MATERIAL),
@@ -85,13 +77,22 @@ public class SiegeEngineerMovable extends BuildingWorkerMovable {
 									mov.getWorkshop().weaponMaterialTaken(mov.getMaterial());
 									mov.setMaterial(EMaterialType.NO_MATERIAL);
 								})),
-								repeatLoop(2, playAction(EMovableAction.ACTION1, WORK_STEP_DURATION))
+								playAction(EMovableAction.ACTION1, ESiegeWeaponType.MATERIAL_WORK_DURATION_MS)
+							),
+							sequence(
+								condition(mov -> mov.job == ESiegeWorkshopJob.FETCH_AMMO_MATERIAL),
+								goToInputStack(mov -> mov.fetchMaterial),
+								setDirectionNode(EDirection.NORTH_WEST),
+								take(mov -> mov.fetchMaterial, true),
+								enterHome(),
+								action(mov -> {
+									mov.getWorkshop().ammoMaterialTaken(mov.getMaterial());
+									mov.setMaterial(EMaterialType.NO_MATERIAL);
+								}),
+								sleep(ESiegeWeaponType.MATERIAL_WORK_DURATION_MS)
 							),
 							sequence(
 								condition(mov -> mov.job == ESiegeWorkshopJob.PRODUCE_AMMO),
-								bringAmmoInputInside(0),
-								bringAmmoInputInside(1),
-								sleep(AMMO_PRODUCTION_DURATION),
 								show(),
 								goToPos(mov -> mov.getWorkshop().getAmmoStackPosition()),
 								setDirectionNode(EDirection.NORTH_EAST),
@@ -111,31 +112,29 @@ public class SiegeEngineerMovable extends BuildingWorkerMovable {
 		);
 	}
 
-	/**
-	 * Brings the ammunition input with the given index into the building. Does nothing if the recipe has less inputs.
-	 */
-	private static Node<SiegeEngineerMovable> bringAmmoInputInside(int inputIndex) {
-		return selector(
-				condition(mov -> mov.getWeaponType().getAmmoInputs().length <= inputIndex),
-				sequence(
-					goToInputStack(mov -> mov.getWeaponType().getAmmoInputs()[inputIndex]),
-					setDirectionNode(EDirection.NORTH_WEST),
-					take(mov -> mov.getWeaponType().getAmmoInputs()[inputIndex], true),
-					enterHome(),
-					setMaterialNode(EMaterialType.NO_MATERIAL)
-				)
-		);
-	}
-
 	private boolean chooseJob() {
 		SiegeWorkshopBuilding workshop = getWorkshop();
+		// A migrated old coroutine may have already picked up an item. Never overwrite it with the next pickup.
+		EMaterialType carried = getMaterial();
+		if (carried != EMaterialType.NO_MATERIAL) {
+			if (job == ESiegeWorkshopJob.FETCH_WEAPON_MATERIAL && workshop.getOrderedSiegeWeapons() > 0) {
+				workshop.weaponMaterialTaken(carried);
+			} else if (getWeaponType().isAmmoInput(carried)) {
+				workshop.ammoMaterialTaken(carried);
+			} else if (!grid.dropMaterial(position, carried, true, false)) {
+				return false;
+			}
+			setMaterial(EMaterialType.NO_MATERIAL);
+		}
 		job = workshop.getNextJob();
-		fetchMaterial = job == ESiegeWorkshopJob.FETCH_WEAPON_MATERIAL ? workshop.findAvailableWeaponMaterial() : null;
+		fetchMaterial = job == ESiegeWorkshopJob.FETCH_WEAPON_MATERIAL ? workshop.findAvailableWeaponMaterial()
+				: job == ESiegeWorkshopJob.FETCH_AMMO_MATERIAL ? workshop.findAvailableAmmoMaterial() : null;
 		return job != ESiegeWorkshopJob.NONE;
 	}
 
 	private void storeAmmo() {
-		if (getWorkshop().storeAmmo()) {
+		int produced = getWorkshop().storeAmmoBatch();
+		for (int i = 0; i < produced; i++) {
 			produce(getWeaponType().getAmmo());
 		}
 	}

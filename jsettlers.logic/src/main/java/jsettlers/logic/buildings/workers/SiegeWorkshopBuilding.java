@@ -14,6 +14,8 @@
  *******************************************************************************/
 package jsettlers.logic.buildings.workers;
 
+import java.io.IOException;
+import java.io.ObjectInputStream;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
@@ -50,6 +52,7 @@ public class SiegeWorkshopBuilding extends WorkerBuilding implements IBuilding.I
 		FETCH_WEAPON_MATERIAL,
 		ASSEMBLE_WEAPON,
 		PRODUCE_AMMO,
+		FETCH_AMMO_MATERIAL,
 	}
 
 	private final ESiegeWeaponType weaponType;
@@ -57,7 +60,9 @@ public class SiegeWorkshopBuilding extends WorkerBuilding implements IBuilding.I
 	 * Number of items of each material of {@link ESiegeWeaponType#getWeaponCostMaterials()} that were already brought to the anvil for the
 	 * current weapon.
 	 */
-	private final short[] takenForWeapon;
+	private short[] takenForWeapon;
+	private short[] takenForAmmo;
+	private int storedFromAmmoBatch;
 	private int orderedWeapons = 0;
 	private int assemblySteps = 0;
 	/**
@@ -69,6 +74,7 @@ public class SiegeWorkshopBuilding extends WorkerBuilding implements IBuilding.I
 		super(type, player, position, buildingsGrid);
 		this.weaponType = ESiegeWeaponType.fromWorkshop(type);
 		this.takenForWeapon = new short[weaponType.getWeaponCostMaterials().length];
+		this.takenForAmmo = new short[weaponType.getAmmoInputs().length];
 	}
 
 	@Override
@@ -138,7 +144,7 @@ public class SiegeWorkshopBuilding extends WorkerBuilding implements IBuilding.I
 			}
 		}
 		if (canProduceAmmo()) {
-			return ESiegeWorkshopJob.PRODUCE_AMMO;
+			return areAllAmmoMaterialsTaken() ? ESiegeWorkshopJob.PRODUCE_AMMO : ESiegeWorkshopJob.FETCH_AMMO_MATERIAL;
 		}
 		return ESiegeWorkshopJob.NONE;
 	}
@@ -202,7 +208,7 @@ public class SiegeWorkshopBuilding extends WorkerBuilding implements IBuilding.I
 
 		Optional<ShortPoint2D> spawnPosition = HexGridArea.stream(center.x, center.y, startRadius, maxRadius)
 				.filterBounds(movableGrid.getWidth(), movableGrid.getHeight())
-				.filter((x, y) -> movableGrid.isFreePosition(x, y) && !movableGrid.isWater(x, y) && !movableGrid.isProtected(x, y))
+				.filter((x, y) -> !movableGrid.isProtected(x, y) && movableGrid.canSpawnAt(weaponType.movableType, getPlayer(), new ShortPoint2D(x, y)))
 				.getFirst();
 
 		if (!spawnPosition.isPresent()) {
@@ -214,17 +220,66 @@ public class SiegeWorkshopBuilding extends WorkerBuilding implements IBuilding.I
 	}
 
 	public boolean canProduceAmmo() {
-		if (!weaponType.usesAmmo()) {
+		if (!weaponType.usesAmmo() || getAmmoStackSize() >= ESiegeWeaponType.AMMO_STACK_CAPACITY) {
 			return false;
 		}
+		return areAllAmmoMaterialsTaken() || findAvailableAmmoMaterial() != null;
+	}
 
-		for (EMaterialType input : weaponType.getAmmoInputs()) {
-			if (getStillNeededForWeapon(input) > 0 || !hasMaterialOnStack(input)) {
-				return false; // the weapon has precedence
+	public EMaterialType findAvailableAmmoMaterial() {
+		EMaterialType[] inputs = weaponType.getAmmoInputs();
+		for (int i = 0; i < inputs.length; i++) {
+			if (takenForAmmo[i] < weaponType.getAmmoBatchInputCount(inputs[i])
+					&& getStillNeededForWeapon(inputs[i]) <= 0 && hasMaterialOnStack(inputs[i])) {
+				return inputs[i];
 			}
 		}
+		return null;
+	}
 
-		return getAmmoStackSize() < ESiegeWeaponType.AMMO_STACK_CAPACITY;
+	public void ammoMaterialTaken(EMaterialType material) {
+		EMaterialType[] inputs = weaponType.getAmmoInputs();
+		for (int i = 0; i < inputs.length; i++) {
+			if (inputs[i] == material && takenForAmmo[i] < weaponType.getAmmoBatchInputCount(material)) {
+				takenForAmmo[i]++;
+				return;
+			}
+		}
+	}
+
+	private boolean areAllAmmoMaterialsTaken() {
+		if (!weaponType.usesAmmo()) return false;
+		EMaterialType[] inputs = weaponType.getAmmoInputs();
+		for (int i = 0; i < inputs.length; i++) {
+			if (takenForAmmo[i] < weaponType.getAmmoBatchInputCount(inputs[i])) return false;
+		}
+		return true;
+	}
+
+	/** Store only paid-for shots, retaining unfinished delivery across worker replacement and saving. */
+	public int storeAmmoBatch() {
+		if (!areAllAmmoMaterialsTaken()) return 0;
+		int produced = 0;
+		while (storedFromAmmoBatch < ESiegeWeaponType.AMMO_STACK_CAPACITY && storeAmmo()) {
+			storedFromAmmoBatch++;
+			produced++;
+		}
+		if (storedFromAmmoBatch == ESiegeWeaponType.AMMO_STACK_CAPACITY) {
+			java.util.Arrays.fill(takenForAmmo, (short) 0);
+			storedFromAmmoBatch = 0;
+		}
+		return produced;
+	}
+
+	private void readObject(ObjectInputStream input) throws IOException, ClassNotFoundException {
+		input.defaultReadObject();
+		if (takenForAmmo == null) takenForAmmo = new short[weaponType.getAmmoInputs().length];
+		if (takenForWeapon.length != weaponType.getWeaponCostMaterials().length) {
+			short[] old = takenForWeapon;
+			takenForWeapon = new short[weaponType.getWeaponCostMaterials().length];
+			takenForWeapon[0] = old[0];
+			takenForWeapon[weaponType == ESiegeWeaponType.GONG ? 2 : 1] = old[1];
+		}
 	}
 
 	/**

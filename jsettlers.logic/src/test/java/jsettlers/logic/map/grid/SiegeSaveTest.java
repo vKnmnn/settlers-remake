@@ -32,6 +32,7 @@ public class SiegeSaveTest {
 		MatchConstants.init(new NetworkTimer(true), 0L);
 		original = new MainGrid("siege-save", "Siege save", (short) 64, (short) 64,
 				new PlayerSetting[] { new PlayerSetting((byte) 0), new PlayerSetting((byte) 1) });
+		original.landscapeGrid.generateBlockedPartitions();
 	}
 
 	@After public void cleanup() {
@@ -66,19 +67,15 @@ public class SiegeSaveTest {
 		assertEquals(1, weapons(restored));
 	}
 
-	@Test public void partiallyAssembledWeaponFinishesAfterOnlyRemainingWork() throws Exception {
+	@Test public void fullySuppliedWeaponFinishesAfterLoadingWithoutMoreMaterials() throws Exception {
 		SiegeWorkshopBuilding workshop = workshop();
 		workshop.orderSiegeWeapon();
 		for (EMaterialType material : ESiegeWeaponType.CATAPULT.getWeaponCostMaterials()) {
 			for (int i = 0; i < ESiegeWeaponType.CATAPULT.getWeaponCost(material); i++) workshop.weaponMaterialTaken(material);
 		}
-		for (int i = 0; i < ESiegeWeaponType.ASSEMBLY_STEPS - 2; i++) workshop.workOnWeapon();
 		assertEquals(0, weapons(original));
 		restored = TestUtils.serializeAndDeserialize(original);
 		SiegeWorkshopBuilding loaded = loadedWorkshop();
-		loaded.workOnWeapon();
-		assertEquals(1, loaded.getOrderedSiegeWeapons());
-		assertEquals(0, weapons(restored));
 		loaded.workOnWeapon();
 		assertEquals(0, loaded.getOrderedSiegeWeapons());
 		assertEquals(1, weapons(restored));
@@ -109,6 +106,7 @@ public class SiegeSaveTest {
 		Movable loadedVictim = (Movable) restored.getMovableGrid().getMovableAt(target.x, target.y);
 		SiegeProjectileObject loadedProjectile = projectile(restored, target);
 		assertNotNull(loadedProjectile);
+		assertSame(loadedVictim, loadedProjectile.getTarget());
 		assertEquals(2, loadedWeapon.getAmmo());
 		assertEquals(projectile.getWeaponType(), loadedProjectile.getWeaponType());
 		assertEquals(projectile.getHitStrength(), loadedProjectile.getHitStrength(), 0f);
@@ -154,7 +152,7 @@ public class SiegeSaveTest {
 		}
 		ShortPoint2D center = workshop.getAmmoStackPosition();
 		ShortPoint2D free = jsettlers.common.map.shapes.HexGridArea.stream(center.x, center.y, 1, SiegeWeaponMovable.RELOAD_RADIUS)
-				.filter((x, y) -> original.movablePathfinderGrid.isFreePosition(x, y) && !original.flagsGrid.isProtected(x, y))
+				.filter((x, y) -> original.movablePathfinderGrid.canSpawnAt(EMovableType.CATAPULT, workshop.getPlayer(), new ShortPoint2D(x, y)) && !original.flagsGrid.isProtected(x, y))
 				.getFirst().get();
 		jsettlers.common.map.shapes.HexGridArea.stream(center.x, center.y, 1, SiegeWeaponMovable.RELOAD_RADIUS)
 				.forEach((x, y) -> original.flagsGrid.setProtected(x, y, true));
@@ -165,6 +163,42 @@ public class SiegeSaveTest {
 		workshop.workOnWeapon();
 		assertEquals(0, workshop.getOrderedSiegeWeapons());
 		assertEquals(EMovableType.CATAPULT, original.movableGrid.getMovableAt(free.x, free.y).getMovableType());
+	}
+
+	@Test public void movingTargetRemainsBoundAcrossSaveWhileReplacementIsUnharmed() throws Exception {
+		ShortPoint2D aim = new ShortPoint2D(24, 12);
+		ShortPoint2D moved = new ShortPoint2D(28, 12);
+		Player enemy = original.getPartitionsGrid().getPlayer((byte) 1);
+		Movable victim = Movable.createMovable(EMovableType.CATAPULT, enemy, aim, original.movablePathfinderGrid);
+		original.movablePathfinderGrid.addSiegeProjectile(new ShortPoint2D(12, 12),
+				original.getPartitionsGrid().getPlayer((byte) 0), ESiegeWeaponType.CATAPULT, 60f, (SiegeWeaponMovable) victim);
+		victim.setPosition(moved);
+		Movable.createMovable(EMovableType.CATAPULT, enemy, aim, original.movablePathfinderGrid);
+		restored = TestUtils.serializeAndDeserialize(original);
+		Movable loadedVictim = (Movable) restored.movableGrid.getMovableAt(moved.x, moved.y);
+		Movable replacement = (Movable) restored.movableGrid.getMovableAt(aim.x, aim.y);
+		assertSame(loadedVictim, projectile(restored, aim).getTarget());
+		float health = loadedVictim.getHealth();
+		float replacementHealth = replacement.getHealth();
+		MatchConstants.clock().setTime(2000);
+		restored.mapObjectsManager.timerEvent();
+		assertEquals(health - 60f, loadedVictim.getHealth(), 0f);
+		assertEquals(replacementHealth, replacement.getHealth(), 0f);
+		assertEquals(health, victim.getHealth(), 0f);
+	}
+
+	@Test public void destroyedTargetDoesNotTransferShotToReplacement() {
+		ShortPoint2D aim = new ShortPoint2D(24, 12);
+		Player enemy = original.getPartitionsGrid().getPlayer((byte) 1);
+		Movable victim = Movable.createMovable(EMovableType.CATAPULT, enemy, aim, original.movablePathfinderGrid);
+		original.movablePathfinderGrid.addSiegeProjectile(new ShortPoint2D(12, 12),
+				original.getPartitionsGrid().getPlayer((byte) 0), ESiegeWeaponType.CATAPULT, 60f, (SiegeWeaponMovable) victim);
+		victim.kill();
+		Movable replacement = Movable.createMovable(EMovableType.CATAPULT, enemy, aim, original.movablePathfinderGrid);
+		float health = replacement.getHealth();
+		MatchConstants.clock().setTime(2000);
+		original.mapObjectsManager.timerEvent();
+		assertEquals(health, replacement.getHealth(), 0f);
 	}
 
 	private SiegeWorkshopBuilding workshop() {

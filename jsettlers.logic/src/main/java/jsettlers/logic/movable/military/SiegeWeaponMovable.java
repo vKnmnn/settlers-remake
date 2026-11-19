@@ -69,6 +69,8 @@ public class SiegeWeaponMovable extends AttackableHumanMovable implements jsettl
 
 		if (movable instanceof SiegeWeaponMovable) { // e.g. the weapon changed its player
 			ammo = ((SiegeWeaponMovable) movable).ammo;
+		} else {
+			ammo = weaponType.maxAmmo;
 		}
 	}
 
@@ -148,10 +150,12 @@ public class SiegeWeaponMovable extends AttackableHumanMovable implements jsettl
 				condition(SiegeWeaponMovable::isTargetValid),
 				action(mov -> {
 					mov.setDirection(EDirection.getApproxDirection(mov.position, mov.target.getPosition()));
+					mov.shoot();
 				}),
 				playAction(EMovableAction.ACTION1, mov -> mov.weaponType.fireDurationMs),
 				condition(SiegeWeaponMovable::isTargetValid),
-				action(SiegeWeaponMovable::shoot)
+				// Keep the existing behaviour-node layout for suspended savegame coroutines.
+				action(mov -> { })
 		);
 	}
 
@@ -214,7 +218,7 @@ public class SiegeWeaponMovable extends AttackableHumanMovable implements jsettl
 
 		if (weaponType.usesAmmo()) {
 			ammo--;
-			grid.addSiegeProjectile(position, player, weaponType, strength, target.getPosition());
+			grid.addSiegeProjectile(position, player, weaponType, strength, target);
 		} else {
 			grid.applySiegeDamage(target.getPosition(), weaponType, strength, player, position);
 		}

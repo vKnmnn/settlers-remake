@@ -115,11 +115,12 @@ public class SiegeWeaponsIT {
 		runFor(3 * 60 * 1000);
 		assertTrue(workshop.getAmmoStackSize() <= ESiegeWeaponType.AMMO_STACK_CAPACITY);
 
-		// an ordered weapon is built from planks and iron
+		// The weapon includes its original six-shot initial load.
 		workshop.orderSiegeWeapon();
 		assertEquals(1, workshop.getOrderedSiegeWeapons());
-		supply(workshop, EMaterialType.PLANK, 4);
-		supply(workshop, EMaterialType.IRON, 2);
+		supply(workshop, EMaterialType.PLANK, 6);
+		supply(workshop, EMaterialType.IRON, 3);
+		supply(workshop, EMaterialType.STONE, 6);
 		assertTrue("no catapult built", runUntil(() -> !getWeapons(EMovableType.CATAPULT).isEmpty(), 5 * 60 * 1000));
 		assertEquals(0, workshop.getOrderedSiegeWeapons());
 
@@ -133,7 +134,11 @@ public class SiegeWeaponsIT {
 		OccupyingBuilding tower = Building.getAllBuildings().stream()
 				.filter(building -> building instanceof OccupyingBuilding && building.getPlayer() == enemy)
 				.map(building -> (OccupyingBuilding) building).findFirst().get();
-		ShortPoint2D position = findFreePosition(tower.getPosition(), 15);
+		ShortPoint2D position = HexGridArea.stream(tower.getPosition().x, tower.getPosition().y, 15, 20)
+				.filterBounds(grid.width, grid.height)
+				.filter((x, y) -> !grid.movablePathfinderGrid.isBlockedOrProtected(x, y))
+				.filter((x, y) -> grid.movablePathfinderGrid.canSpawnAt(EMovableType.CATAPULT, player, new ShortPoint2D(x, y)))
+				.getFirst().get();
 		SiegeWeaponMovable catapult = (SiegeWeaponMovable) Movable.createMovable(EMovableType.CATAPULT, player, position, grid.movablePathfinderGrid);
 		catapult.setAmmo(6);
 		assertTrue("catapult did not shoot at the tower", runUntil(() -> catapult.getAmmo() < 6, 60 * 1000));

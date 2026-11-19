@@ -14,6 +14,8 @@
  *******************************************************************************/
 package jsettlers.logic.map.grid.objects;
 
+import jsettlers.logic.movable.interfaces.IAttackable;
+
 import jsettlers.common.movable.ESiegeWeaponType;
 import java.io.IOException;
 import java.io.ObjectInputStream;
@@ -378,9 +380,10 @@ public final class MapObjectsManager implements IScheduledTimerable, Serializabl
 	/**
 	 * Adds a projectile of a siege weapon flying from the shooter to the attacked position.
 	 */
-	public void addSiegeProjectile(ShortPoint2D attackedPos, ShortPoint2D shooterPos, IPlayer shooterPlayer, ESiegeWeaponType weaponType,
+	public void addSiegeProjectile(IAttackable target, ShortPoint2D shooterPos, IPlayer shooterPlayer, ESiegeWeaponType weaponType,
 			float hitStrength) {
-		SiegeProjectileObject projectile = new SiegeProjectileObject(grid, attackedPos, shooterPos, shooterPlayer, weaponType, hitStrength);
+		ShortPoint2D attackedPos = target.getPosition();
+		SiegeProjectileObject projectile = new SiegeProjectileObject(grid, attackedPos, shooterPos, shooterPlayer, weaponType, hitStrength, target);
 		addMapObject(attackedPos, projectile);
 		schedule(projectile, projectile.getEndTime(), false);
 		schedule(projectile, projectile.getEndTime() + SIEGE_PROJECTILE_REMOVE_DELAY, true);

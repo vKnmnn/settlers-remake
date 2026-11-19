@@ -83,7 +83,7 @@ public class FerryMovable extends AttackableMovable implements IFerryMovable {
 				.iterate((x, y) -> {
 					IAttackableHumanMovable passenger = passengers.get(passengers.size() - 1);
 
-					if (grid.isValidPosition(passenger, x, y) && grid.isFreePosition(x,y)) {
+					if (grid.canOccupy(passenger, new ShortPoint2D(x, y))) {
 						passenger.leaveFerryAt(new ShortPoint2D(x, y));
 						passengers.remove(passengers.size() - 1);
 					}

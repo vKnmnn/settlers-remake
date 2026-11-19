@@ -23,6 +23,10 @@ public class InfantryMovable extends SoldierMovable {
 		}
 
 		int distance = position.getOnGridDistTo(enemy.getPosition());
+		if (enemy instanceof jsettlers.logic.movable.interfaces.ILogicMovable
+				&& ((jsettlers.logic.movable.interfaces.ILogicMovable) enemy).getMovableType().isSiegeWeapon()) {
+			distance = Math.max(0, distance - 1);
+		}
 
 		return distance <= getMaxAttackDistance();
 	}

@@ -42,6 +42,9 @@ public final class MovableGrid implements Serializable {
 	private static final long serialVersionUID = 7003522358013103962L;
 
 	private transient ILogicMovable[] movableGrid;
+	/** Derived occupancy only; the public/rendered/serialized array still has one entry per unit. */
+	private transient int[] footprintOwners;
+	private static final int[][] FOOTPRINT = {{0, 0}, {0, -1}, {1, 0}, {1, 1}, {0, 1}, {-1, 0}, {-1, -1}};
 	private final IWalkableGround ground;
 	private final short width;
 
@@ -52,6 +55,7 @@ public final class MovableGrid implements Serializable {
 		this.height = height;
 		this.ground = ground;
 		this.movableGrid = new ILogicMovable[width * height];
+		this.footprintOwners = new int[width * height];
 	}
 
 	private void writeObject(ObjectOutputStream oos) throws IOException {
@@ -62,6 +66,7 @@ public final class MovableGrid implements Serializable {
 	private void readObject(ObjectInputStream ois) throws ClassNotFoundException, IOException {
 		ois.defaultReadObject();
 		movableGrid = SerializationUtils.readSparseArray(ois, ILogicMovable.class);
+		footprintOwners = new int[width * height];
 	}
 
 	public final ILogicMovable getMovableAt(int x, int y) {
@@ -75,6 +80,12 @@ public final class MovableGrid implements Serializable {
 	public final void movableLeft(ShortPoint2D position, ILogicMovable movable) {
 		int idx = position.x + position.y * width;
 		if (this.movableGrid[idx] == movable) {
+			if (movable.getMovableType().isSiegeWeapon()) {
+				for (int[] offset : FOOTPRINT) {
+					int x = position.x + offset[0], y = position.y + offset[1];
+					if (inBounds(x, y) && footprintOwners[x + y * width] == idx + 1) footprintOwners[x + y * width] = 0;
+				}
+			}
 			this.movableGrid[idx] = null;
 		}
 	}
@@ -91,7 +102,15 @@ public final class MovableGrid implements Serializable {
 		final short x = position.x;
 		final short y = position.y;
 
+		ILogicMovable occupied = getOccupantAt(x, y);
+		if (occupied != null && occupied != movable && occupied.getMovableType().isSiegeWeapon()) {
+			throw new IllegalStateException("Cannot overwrite a siege footprint at " + position);
+		}
+		if (movable != null && movable.getMovableType().isSiegeWeapon() && findBlockingMovable(movable, position, true) != null) {
+			throw new IllegalStateException("Cannot place overlapping siege footprint at " + position);
+		}
 		this.movableGrid[x + y * width] = movable;
+		if (movable != null && movable.getMovableType().isSiegeWeapon()) reserveFootprint(position);
 		if (movable != null && movable.getMovableType() == EMovableType.BEARER) {
 			ground.walkOn(x, y);
 		}
@@ -152,6 +171,37 @@ public final class MovableGrid implements Serializable {
 	}
 
 	public boolean hasNoMovableAt(int x, int y) {
-		return getMovableAt(x, y) == null;
+		return getOccupantAt(x, y) == null;
 	}
+	private boolean inBounds(int x, int y) {
+		return x >= 0 && y >= 0 && x < width && y < height;
+	}
+
+	public ILogicMovable getOccupantAt(int x, int y) {
+		if (!inBounds(x, y)) return null;
+		int index = x + y * width;
+		int owner = footprintOwners[index];
+		return owner == 0 ? movableGrid[index] : movableGrid[owner - 1];
+	}
+
+	public ILogicMovable findBlockingMovable(ILogicMovable requester, ShortPoint2D center, boolean large) {
+		for (int i = 0; i < (large ? FOOTPRINT.length : 1); i++) {
+			ILogicMovable owner = getOccupantAt(center.x + FOOTPRINT[i][0], center.y + FOOTPRINT[i][1]);
+			if (owner != null && owner != requester) return owner;
+		}
+		return null;
+	}
+
+	public void clearFootprintReservations() {
+		java.util.Arrays.fill(footprintOwners, 0);
+	}
+
+	public void reserveFootprint(ShortPoint2D center) {
+		for (int[] offset : FOOTPRINT) {
+			int x = center.x + offset[0], y = center.y + offset[1];
+			if (!inBounds(x, y)) throw new IllegalArgumentException("Siege footprint outside map: " + center);
+			footprintOwners[x + y * width] = center.x + center.y * width + 1;
+		}
+	}
+
 }

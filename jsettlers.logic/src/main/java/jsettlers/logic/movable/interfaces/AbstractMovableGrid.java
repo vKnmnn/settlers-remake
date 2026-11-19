@@ -47,6 +47,17 @@ public abstract class AbstractMovableGrid extends AbstractStrategyGrid {
 	@Override
 	public abstract boolean hasNoMovableAt(int x, int y);
 
+	public abstract ILogicMovable getOccupantAt(int x, int y);
+
+	public abstract boolean canSpawnAt(jsettlers.common.movable.EMovableType type, Player player, ShortPoint2D position);
+
+	public abstract boolean canOccupy(ILogicMovable movable, ShortPoint2D position);
+
+	public abstract ILogicMovable findBlockingMovable(ILogicMovable movable, ShortPoint2D position);
+
+	/** Atomically validates and moves a footprint; ordinary single-cell swaps retain their existing semantics. */
+	public abstract boolean tryMovePosition(ILogicMovable movable, ShortPoint2D from, ShortPoint2D to);
+
 	public abstract void leavePosition(ShortPoint2D position, ILogicMovable movable);
 
 	/**

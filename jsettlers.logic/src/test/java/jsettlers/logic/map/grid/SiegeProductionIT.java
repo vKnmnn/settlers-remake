@@ -119,7 +119,7 @@ public class SiegeProductionIT {
 
 		if (weaponType.usesAmmo()) {
 			for (EMaterialType material : weaponType.getAmmoInputs()) {
-				supply(workshop, material, 3);
+				supply(workshop, material, weaponType.getAmmoBatchInputCount(material));
 			}
 			assertTrue(weaponType + " worker failed to produce ammunition",
 					runUntil(() -> workshop.getAmmoStackSize() > 0, 3 * 60 * 1000));
@@ -131,7 +131,7 @@ public class SiegeProductionIT {
 		assertEquals(1, workshop.getOrderedSiegeWeapons());
 		for (EMaterialType material : weaponType.getWeaponCostMaterials()) {
 			// Allow for ammunition already using the same stacks before the order was placed.
-			supply(workshop, material, weaponType.getWeaponCost(material));
+			supply(workshop, material, Math.max(0, weaponType.getWeaponCost(material) - inputAmount(workshop, material)));
 		}
 		assertTrue(weaponType + " worker failed to assemble the ordered weapon",
 				runUntil(() -> !getWeapons(weaponType.movableType).isEmpty(), 5 * 60 * 1000));

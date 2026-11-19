@@ -87,10 +87,11 @@ public enum EMovableType {
 
 	SIEGE_ENGINEER(EMaterialType.HAMMER, ESelectionType.PEOPLE, true, false),
 
-	CATAPULT(EMaterialType.NO_MATERIAL, ESelectionType.SOLDIERS, false, true, 1.2, 300f, 45f),
-	BALLISTA(EMaterialType.NO_MATERIAL, ESelectionType.SOLDIERS, false, true, 1.0, 250f, 35f),
-	CANNON(EMaterialType.NO_MATERIAL, ESelectionType.SOLDIERS, false, true, 1.3, 350f, 60f),
-	GONG(EMaterialType.NO_MATERIAL, ESelectionType.SOLDIERS, false, true, 1.0, 250f, 20f),
+	// Original standard-ground step: 12 * 64 ms. Constructor applies the shared 0.75 speed factor.
+	CATAPULT(EMaterialType.NO_MATERIAL, ESelectionType.SOLDIERS, false, true, 1.024, 250f, 45f),
+	BALLISTA(EMaterialType.NO_MATERIAL, ESelectionType.SOLDIERS, false, true, 1.024, 250f, 35f),
+	CANNON(EMaterialType.NO_MATERIAL, ESelectionType.SOLDIERS, false, true, 1.024, 250f, 60f),
+	GONG(EMaterialType.NO_MATERIAL, ESelectionType.SOLDIERS, false, true, 1.024, 250f, 20f),
 	;
 
 	/**

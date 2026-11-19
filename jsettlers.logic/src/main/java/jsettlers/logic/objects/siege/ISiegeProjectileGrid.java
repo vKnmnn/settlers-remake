@@ -15,12 +15,12 @@
 package jsettlers.logic.objects.siege;
 
 /**
- * This interface is used by {@link SiegeProjectileObject}s to hit the area around their target.
+ * This interface is used by {@link SiegeProjectileObject}s to hit their original target.
  */
 public interface ISiegeProjectileGrid {
 
 	/**
-	 * Damages all enemies around the target of the given projectile.
+	 * Damages the original target if it is still alive and hostile.
 	 *
 	 * @param projectile
 	 *            The projectile hitting its target.

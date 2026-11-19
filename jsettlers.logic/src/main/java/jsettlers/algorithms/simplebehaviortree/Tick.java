@@ -64,12 +64,20 @@ public class Tick<T> {
 
 	public static <T> Tick<T> deserialize(ObjectInputStream ois, T target, Root<T> root)
 			throws IOException, ClassNotFoundException {
-		Tick<T> out = new Tick<>(target, root);
+		return deserialize(ois, target, root, false);
+	}
 
-		out.properties.putAll((Map<Integer, Object>) ois.readObject());
+	/** Consume obsolete coroutine data without resolving its node IDs against a changed tree. */
+	public static <T> Tick<T> deserialize(ObjectInputStream ois, T target, Root<T> root, boolean reset)
+			throws IOException, ClassNotFoundException {
+		Tick<T> out = new Tick<>(target, root);
+		Map<Integer, Object> savedProperties = (Map<Integer, Object>) ois.readObject();
+		if (!reset) out.properties.putAll(savedProperties);
 		int openNodeCount = ois.readInt();
 		for(int i = 0; i < openNodeCount; i++) {
-			Node<T> openNode = root.findNode(ois.readInt());
+			int id = ois.readInt();
+			if (reset) continue;
+			Node<T> openNode = root.findNode(id);
 
 			if(openNode == null) throw new Error("Unknown open node!");
 

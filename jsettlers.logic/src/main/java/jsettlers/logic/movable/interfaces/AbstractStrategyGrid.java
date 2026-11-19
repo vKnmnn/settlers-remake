@@ -245,7 +245,7 @@ public abstract class AbstractStrategyGrid implements Serializable {
 
 	/** Adds a projectile whose impact affects a single eligible target. */
 	public abstract void addSiegeProjectile(ShortPoint2D shooterPos, IPlayer shooterPlayer, ESiegeWeaponType weaponType, float hitStrength,
-			ShortPoint2D attackedPos);
+			IAttackable target);
 
 	public abstract void applySiegeDamage(ShortPoint2D center, ESiegeWeaponType weapon, float strength, IPlayer player, ShortPoint2D source);
 

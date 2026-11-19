@@ -27,26 +27,26 @@ import jsettlers.common.player.ECivilisation;
 public enum ESiegeWeaponType {
 	CATAPULT(ECivilisation.ROMAN, EBuildingType.CATAPULT_WORKSHOP, EMovableType.CATAPULT, EMaterialType.CATAPULT_AMMO,
 			new EMaterialType[] { EMaterialType.STONE },
-			new EMaterialType[] { EMaterialType.PLANK, EMaterialType.IRON }, new short[] { 4, 2 },
-			10, 26, 60f, 6000, 6, 0.045f, 1500),
+			new EMaterialType[] { EMaterialType.PLANK, EMaterialType.IRON, EMaterialType.STONE }, new short[] { 6, 3, 6 },
+			10, 27, 60f, 1536, 6, 0.045f, 1536),
 
 	BALLISTA(ECivilisation.EGYPTIAN, EBuildingType.BALLISTA_WORKSHOP, EMovableType.BALLISTA, EMaterialType.BALLISTA_AMMO,
-			new EMaterialType[] { EMaterialType.PLANK, EMaterialType.IRON },
-			new EMaterialType[] { EMaterialType.PLANK, EMaterialType.IRON }, new short[] { 4, 2 },
-			10, 24, 80f, 4000, 6, 0.03f, 1000),
+			new EMaterialType[] { EMaterialType.TRUNK, EMaterialType.IRON },
+			new EMaterialType[] { EMaterialType.PLANK, EMaterialType.IRON, EMaterialType.TRUNK }, new short[] { 5, 6, 6 },
+			10, 31, 80f, 960, 6, 0.03f, 960),
 
 	CANNON(ECivilisation.ASIAN, EBuildingType.CANNON_WORKSHOP, EMovableType.CANNON, EMaterialType.CANNON_AMMO,
 			new EMaterialType[] { EMaterialType.IRON, EMaterialType.GUN_POWDER },
-			new EMaterialType[] { EMaterialType.PLANK, EMaterialType.IRON }, new short[] { 4, 2 },
-			10, 24, 100f, 7000, 6, 0.035f, 1200),
+			new EMaterialType[] { EMaterialType.PLANK, EMaterialType.IRON, EMaterialType.GUN_POWDER }, new short[] { 3, 8, 6 },
+			10, 35, 100f, 1152, 6, 0.035f, 1152),
 
 	/**
 	 * The gong needs no ammunition. It attacks a single target and can destroy civilian buildings as well.
 	 */
 	GONG(ECivilisation.AMAZON, EBuildingType.GONG_WORKSHOP, EMovableType.GONG, null,
 			new EMaterialType[0],
-			new EMaterialType[] { EMaterialType.PLANK, EMaterialType.GOLD }, new short[] { 2, 2 },
-			3, 5, 100f, 5000, 0, 0f, 1000);
+			new EMaterialType[] { EMaterialType.PLANK, EMaterialType.IRON, EMaterialType.GOLD }, new short[] { 8, 4, 6 },
+			3, 16, 100f, 3072, 0, 0f, 3072);
 
 	public static final ESiegeWeaponType[] VALUES = values();
 
@@ -56,9 +56,12 @@ public enum ESiegeWeaponType {
 	public static final int AMMO_STACK_CAPACITY = 6;
 
 	/**
-	 * Number of work steps needed to assemble a weapon after all materials were brought to the anvil.
+	 * Finalization attempts needed after every material has received its work animation.
 	 */
-	public static final int ASSEMBLY_STEPS = 12;
+	public static final int ASSEMBLY_STEPS = 1;
+
+	/** Original workshop animation 0x113: 80 frames at 64 ms, for every consumed input. */
+	public static final short MATERIAL_WORK_DURATION_MS = 5120;
 
 	public final ECivilisation civilisation;
 	public final EBuildingType workshop;
@@ -109,10 +112,15 @@ public enum ESiegeWeaponType {
 	}
 
 	/**
-	 * @return The materials that are turned into one ammunition item.
+	 * @return Distinct input materials of a six-shot ammunition batch; quantities are given by getAmmoBatchInputCount.
 	 */
 	public EMaterialType[] getAmmoInputs() {
 		return ammoInputs.clone();
+	}
+
+	/** Original recipes produce six shots from six primary inputs and, where needed, three iron bars. */
+	public int getAmmoBatchInputCount(EMaterialType material) {
+		return !isAmmoInput(material) ? 0 : material == EMaterialType.IRON ? 3 : 6;
 	}
 
 	public boolean isAmmoInput(EMaterialType material) {

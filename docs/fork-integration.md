@@ -428,3 +428,20 @@ mining-to-construction economy. A blocked weapon exit preserves its finished
 order until an unprotected spawn cell becomes available. The worker-replacement
 regression preserves the order and renews ammunition supply requests.
 No interactive multiplayer session or Android build was performed.
+
+## Siege original-parity follow-up and full matches (2026-11-19)
+
+Siege units now reserve seven hex cells while remaining one selectable/countable
+unit. Pathfinding, movement, melee reach, ferry unloading and saved occupancy
+are covered by targeted regressions. Projectiles retain the original target's
+identity instead of damaging a replacement at the old coordinate. Values and
+production recipes are based on further original executable/animation inspection:
+250 HP, six-shot initial loads and ammunition batches, corrected ranges, recovery,
+standard-ground movement and per-material workshop times. See
+[siege-timing.md](siege-timing.md) for evidence, compatibility behavior and remaining
+original differences (notably workshop ammunition storage/reloading).
+
+The optional `:jsettlers.logic:fourCivilisationsIT` runs four complete AI matches
+with a real file save/load and ordinary victory/defeat. It is separate from short
+unit tests; scope and measured outcomes are in
+[playthrough-validation.md](playthrough-validation.md).

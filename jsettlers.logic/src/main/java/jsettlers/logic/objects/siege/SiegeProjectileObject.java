@@ -22,10 +22,11 @@ import jsettlers.common.player.IPlayer;
 import jsettlers.common.position.ShortPoint2D;
 import jsettlers.common.utils.MathUtils;
 import jsettlers.logic.objects.ProgressingSoundableObject;
+import jsettlers.logic.movable.interfaces.IAttackable;
+import java.util.Objects;
 
 /**
- * A projectile of a siege weapon (catapult boulder, ballista bolt or cannon ball). It lies on its target position and damages an eligible target
- * there when it arrives.
+ * A projectile of a siege weapon (catapult boulder, ballista bolt or cannon ball). Its drawing destination stays fixed, while damage remains bound to the original target.
  */
 public final class SiegeProjectileObject extends ProgressingSoundableObject implements ISiegeProjectileMapObject {
 	private static final long serialVersionUID = -5063934183421735630L;
@@ -38,9 +39,10 @@ public final class SiegeProjectileObject extends ProgressingSoundableObject impl
 	private final IPlayer shooterPlayer;
 	private final ESiegeWeaponType weaponType;
 	private final float hitStrength;
+	private final IAttackable target;
 
 	public SiegeProjectileObject(ISiegeProjectileGrid grid, ShortPoint2D targetPos, ShortPoint2D shooterPos, IPlayer shooterPlayer,
-			ESiegeWeaponType weaponType, float hitStrength) {
+			ESiegeWeaponType weaponType, float hitStrength, IAttackable target) {
 		super(targetPos);
 
 		this.grid = grid;
@@ -49,6 +51,7 @@ public final class SiegeProjectileObject extends ProgressingSoundableObject impl
 		this.shooterPlayer = shooterPlayer;
 		this.weaponType = weaponType;
 		this.hitStrength = hitStrength;
+		this.target = Objects.requireNonNull(target, "target");
 
 		float flightDuration = (float) (weaponType.projectileSecondsPerTile * MathUtils.hypot(shooterPos.x - targetPos.x, shooterPos.y - targetPos.y));
 		super.setDuration(Math.max(MIN_FLIGHT_DURATION, flightDuration));
@@ -119,6 +122,11 @@ public final class SiegeProjectileObject extends ProgressingSoundableObject impl
 
 	public IPlayer getShooterPlayer() {
 		return shooterPlayer;
+	}
+
+	/** Null only for projectiles loaded from saves predating target binding. */
+	public IAttackable getTarget() {
+		return target;
 	}
 
 	public float getHitStrength() {

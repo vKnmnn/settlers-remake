@@ -57,6 +57,7 @@ import jsettlers.logic.movable.civilian.SimpleBuildingWorkerMovable;
 import jsettlers.logic.movable.civilian.SiegeEngineerMovable;
 import jsettlers.logic.movable.civilian.SmithMovable;
 import jsettlers.logic.movable.interfaces.AbstractMovableGrid;
+import jsettlers.logic.movable.interfaces.IAttackableMovable;
 import jsettlers.logic.movable.interfaces.ILogicMovable;
 import jsettlers.logic.movable.military.BowmanMovable;
 import jsettlers.logic.movable.military.InfantryMovable;
@@ -74,6 +75,7 @@ import java.io.ObjectOutputStream;
 import java.util.EnumMap;
 import java.util.LinkedList;
 import java.util.Map;
+import java.util.Optional;
 
 import static jsettlers.algorithms.simplebehaviortree.BehaviorTreeHelper.*;
 
@@ -111,6 +113,7 @@ public abstract class Movable implements ILogicMovable, FoWTask {
 
 	protected float         health;
 	private boolean       visible           = true;
+	private boolean waitingForSpawn;
 	private ShortPoint2D pushedFrom;
 
 	private boolean isRightstep = false;
@@ -124,6 +127,8 @@ public abstract class Movable implements ILogicMovable, FoWTask {
 	private boolean leavePosition = false;
 
 	private transient Tick<? extends Movable> tick;
+	/** Version 1 replaces the siege engineer's per-item ammunition behaviour with batches. */
+	private int siegeEngineerBehaviourVersion = 1;
 
 	protected Movable(AbstractMovableGrid grid, EMovableType movableType, ShortPoint2D position, Player player, Movable replace) {
 		this.grid = grid;
@@ -163,7 +168,10 @@ public abstract class Movable implements ILogicMovable, FoWTask {
 		ois.defaultReadObject();
 
 		EMovableType type = (EMovableType) ois.readObject();
-		tick = Tick.deserialize(ois, this, MovableManager.getBehaviourFor(type));
+		boolean resetEngineer = type == EMovableType.SIEGE_ENGINEER && siegeEngineerBehaviourVersion == 0;
+		tick = Tick.deserialize(ois, this, MovableManager.getBehaviourFor(type), resetEngineer);
+		if (resetEngineer) path = null;
+		siegeEngineerBehaviourVersion = 1;
 	}
 
 	private void writeObject(ObjectOutputStream oos) throws IOException {
@@ -202,7 +210,10 @@ public abstract class Movable implements ILogicMovable, FoWTask {
 	}
 
 	protected static <T extends Movable> Node<T> show() {
-		return action(mov -> mov.setVisible(true));
+		return action2(mov -> {
+			mov.setVisible(true);
+			return ((Movable) mov).visible ? NodeStatus.SUCCESS : NodeStatus.RUNNING;
+		});
 	}
 
 	protected static <T extends Movable> Node<T> crouchDown(Node<T> child) {
@@ -244,7 +255,7 @@ public abstract class Movable implements ILogicMovable, FoWTask {
 				condition(mov -> {
 					ShortPoint2D targetPosition = direction.apply(mov).getNextHexPoint(mov.getPosition());
 
-					if ((mov.grid.isValidPosition(mov, targetPosition.x, targetPosition.y) && mov.grid.hasNoMovableAt(targetPosition.x, targetPosition.y))) {
+					if (mov.grid.canOccupy(mov, targetPosition)) {
 						mov.path = new Path(targetPosition);
 						return true;
 					}
@@ -260,7 +271,7 @@ public abstract class Movable implements ILogicMovable, FoWTask {
 					EDirection realDirection = direction.apply(mov);
 
 					ShortPoint2D targetPosition = realDirection.getNextHexPoint(mov.position);
-					if(mov.grid.isFreePosition(targetPosition.x, targetPosition.y)) {
+					if(mov.grid.canOccupy(mov, targetPosition)) {
 						mov.setDirection(realDirection);
 						return true;
 					} else {
@@ -418,7 +429,7 @@ public abstract class Movable implements ILogicMovable, FoWTask {
 		// try to find a way without a movable or with a pushable movable.
 		for (ShortPoint2D[] pathPrefix : possiblePaths) { // check if any of the paths is free of movables
 			ShortPoint2D firstPosition = pathPrefix[0];
-			ILogicMovable movable = grid.getMovableAt(firstPosition.x, firstPosition.y);
+			ILogicMovable movable = grid.findBlockingMovable(this, firstPosition);
 			if (movable == null) {
 				path.goToNextStep();
 				path = new Path(path, pathPrefix);
@@ -430,6 +441,15 @@ public abstract class Movable implements ILogicMovable, FoWTask {
 	public int timerEvent() {
 		if (!isAlive()) {
 			return -1;
+		}
+
+		if (waitingForSpawn) {
+			Optional<ShortPoint2D> free = findReinforcementPosition(movableType, player, position, grid);
+			if (!free.isPresent()) return Constants.MOVABLE_INTERRUPT_PERIOD;
+			position = free.get();
+			setVisible(true);
+			if (!visible) return Constants.MOVABLE_INTERRUPT_PERIOD;
+			waitingForSpawn = false;
 		}
 
 		NodeStatus status = NodeStatus.SUCCESS;
@@ -495,15 +515,15 @@ public abstract class Movable implements ILogicMovable, FoWTask {
 
 	private static <T extends Movable> Node<T> goSingleStep(IShortPoint2DSupplier<T> target) {
 		return sequence(
-			action(mov -> {
+			condition(mov -> {
 				Movable realMov = mov;
 				ShortPoint2D targetPosition = target.apply(mov);
 
 				mov.setDirection(EDirection.getApproxDirection(mov.position, targetPosition));
-				mov.grid.leavePosition(mov.position, mov);
-				mov.grid.enterPosition(targetPosition, mov, false);
+				if (!mov.grid.tryMovePosition(mov, mov.position, targetPosition)) return false;
 				realMov.position = targetPosition;
 				realMov.isRightstep = !realMov.isRightstep;
+				return true;
 
 			}),
 			playAction(EMovableAction.WALKING, mov -> mov.getMovableType().getStepDurationMs())
@@ -609,7 +629,7 @@ public abstract class Movable implements ILogicMovable, FoWTask {
 
 			ShortPoint2D neighbor = dir.getNextHexPoint(position);
 
-			if(grid.isFreePosition(neighbor.x, neighbor.y)) {
+			if(grid.canOccupy(this, neighbor)) {
 				setDirection(dir);
 				return true;
 			}
@@ -631,6 +651,7 @@ public abstract class Movable implements ILogicMovable, FoWTask {
 		if(!(pushingMovable instanceof Movable)) return;
 
 		Movable realPushing = (Movable) pushingMovable;
+		if (movableType.isSiegeWeapon() || pushingMovable.getMovableType().isSiegeWeapon()) return;
 
 		// other movable can actually push us
 		if(id <= realPushing.id) return;
@@ -673,12 +694,18 @@ public abstract class Movable implements ILogicMovable, FoWTask {
 
 	@Override
 	public final void setPosition(ShortPoint2D position) {
-		if (visible) {
-			grid.leavePosition(this.position, this);
-			grid.enterPosition(position, this, true);
+		if (visible && movableType.isSiegeWeapon() && !grid.canOccupy(this, position)) return;
+		if (visible && !grid.tryMovePosition(this, this.position, position)) return;
+		// Siege relocation must not resume a path whose occupied footprint has moved.
+		// Ordinary units may teleport themselves inside their running behavior.
+		if (movableType.isSiegeWeapon()) {
+			tick.close();
+			tick = new Tick<>(this, MovableManager.getBehaviourFor(movableType));
+			this.path = null;
+			this.movableAction = EMovableAction.NO_ACTION;
 		}
-
 		this.position = position;
+		if (visible && this instanceof IAttackableMovable) grid.notifyAttackers(position, (IAttackableMovable) this, true);
 	}
 
 	public final void setVisible(boolean visible) {
@@ -686,6 +713,9 @@ public abstract class Movable implements ILogicMovable, FoWTask {
 			if (this.visible) { // is visible and gets invisible
 				grid.leavePosition(position, this);
 			} else {
+				ILogicMovable blocker = grid.findBlockingMovable(this, position);
+				if (blocker != null && blocker.getMovableType().isSiegeWeapon()) return;
+				if (movableType.isSiegeWeapon() && !grid.canOccupy(this, position)) return;
 				grid.enterPosition(position, this, true);
 			}
 		}  // nothing to change
@@ -752,7 +782,7 @@ public abstract class Movable implements ILogicMovable, FoWTask {
 		if(!valid) return NodeStatus.FAILURE;
 
 		for(int i = 0; i < 4; i++) {
-			ILogicMovable blockingMovable = grid.getMovableAt(path.nextX(), path.nextY());
+			ILogicMovable blockingMovable = grid.findBlockingMovable(this, path.getNextPos());
 
 			if(blockingMovable == null) break;
 
@@ -796,6 +826,7 @@ public abstract class Movable implements ILogicMovable, FoWTask {
 		}
 
 		if(pushedFrom != null) {
+			if (movableType.isSiegeWeapon()) return NodeStatus.RUNNING;
 			if(pushedFrom.equals(path.getNextPos())) return NodeStatus.SUCCESS;
 
 			if(!setRandomFreeDirection()) {
@@ -1028,15 +1059,37 @@ public abstract class Movable implements ILogicMovable, FoWTask {
 	}
 
 	protected static Movable createMovable(EMovableType movableType, Player player, ShortPoint2D position, AbstractMovableGrid grid, Movable replaceMovable) {
+		boolean waitForSpawn = false;
+		ILogicMovable occupant = grid.getOccupantAt(position.x, position.y);
+		if (replaceMovable == null && !movableType.isSiegeWeapon() && occupant != null && occupant.getMovableType().isSiegeWeapon()) {
+			// A house or scripted reinforcement may create a unit while a siege weapon blocks its exit.
+			// Find a deterministic safe nearby position instead of overwriting the reservation.
+			Optional<ShortPoint2D> free = findReinforcementPosition(movableType, player, position, grid);
+			waitForSpawn = !free.isPresent();
+			position = free.orElse(position);
+		}
+		if (movableType.isSiegeWeapon() && (replaceMovable == null
+				? !grid.canSpawnAt(movableType, player, position) : !grid.canOccupy(replaceMovable, position))) {
+			throw new IllegalArgumentException("No space for siege weapon at " + position);
+		}
 		if(replaceMovable != null) replaceMovable.decoupleMovable();
 
 		Movable movable = chooseMovableClass(movableType, player, position, grid, replaceMovable);
 
+		movable.waitingForSpawn = waitForSpawn;
+		movable.visible = !waitForSpawn;
+		if (!waitForSpawn) grid.enterPosition(position, movable, true);
 		MovableManager.add(movable);
-		grid.enterPosition(position, movable, true);
 
 		if(replaceMovable != null) replaceMovable.killMovable();
 		return movable;
+	}
+
+	private static Optional<ShortPoint2D> findReinforcementPosition(EMovableType type, Player player,
+			ShortPoint2D center, AbstractMovableGrid grid) {
+		return jsettlers.common.map.shapes.HexGridArea.stream(center.x, center.y, 0, 12)
+				.filterBounds(grid.getWidth(), grid.getHeight())
+				.filter((x, y) -> grid.canSpawnAt(type, player, new ShortPoint2D(x, y))).getFirst();
 	}
 
 	private static Movable chooseMovableClass(EMovableType movableType, Player player, ShortPoint2D position, AbstractMovableGrid grid, Movable movable) {

@@ -246,6 +246,7 @@ public final class MainGrid implements Serializable {
 
 		initAdditional();
 		this.bordersThread.checkArea(0, 0, width, height);
+		ois.registerValidation(() -> restoreSiegeFootprints(), 0);
 	}
 
 	private void writeObject(ObjectOutputStream oos) throws IOException {
@@ -540,12 +541,46 @@ public final class MainGrid implements Serializable {
 		EnclosedBlockedAreaFinderAlgorithm.checkLandmark(enclosedBlockedAreaFinderGrid, x, y);
 	}
 
-	final boolean isValidPosition(IPathCalculatable pathCalculatable, int x, int y) {
-		if (pathCalculatable.isShip()) {
-			return !landscapeGrid.isBlockedFor(x, y, true);
+	private boolean hasLargeFootprint(IPathCalculatable unit) {
+		return unit instanceof ILogicMovable && ((ILogicMovable) unit).getMovableType().isSiegeWeapon();
+	}
+
+	private boolean siegeTerrainValid(int x, int y) {
+		if (!isInBounds(x, y) || flagsGrid.isBlocked(x, y) || landscapeGrid.isBlockedFor(x, y, false)) return false;
+		for (EDirection direction : EDirection.VALUES) {
+			int nx = x + direction.gridDeltaX, ny = y + direction.gridDeltaY;
+			if (!isInBounds(nx, ny) || flagsGrid.isBlocked(nx, ny) || landscapeGrid.isBlockedFor(nx, ny, false)) return false;
 		}
-		return isInBounds(x, y) && !flagsGrid.isBlocked(x, y)
+		return true;
+	}
+
+	final boolean isValidPosition(IPathCalculatable pathCalculatable, int x, int y) {
+		if (!isInBounds(x, y)) return false;
+		if (pathCalculatable.isShip()) return !landscapeGrid.isBlockedFor(x, y, true);
+		if (hasLargeFootprint(pathCalculatable)) return siegeTerrainValid(x, y);
+		return !flagsGrid.isBlocked(x, y)
 			&& (!pathCalculatable.needsPlayersGround() || pathCalculatable.getPlayer().getPlayerId() == partitionsGrid.getPlayerIdAt(x, y));
+	}
+
+	/** Rebuild derived reservations after the entire object graph has been restored. */
+	void restoreSiegeFootprints() throws java.io.InvalidObjectException {
+		movableGrid.clearFootprintReservations();
+		java.util.List<ILogicMovable> displaced = new java.util.ArrayList<>();
+		for (ILogicMovable movable : movableGrid.getMovableArray()) {
+			if (movable == null || !movable.getMovableType().isSiegeWeapon()) continue;
+			if (movablePathfinderGrid.canOccupy(movable, movable.getPosition())) movableGrid.reserveFootprint(movable.getPosition());
+			else displaced.add(movable);
+		}
+		// Older experimental saves stored siege weapons in one cell. Relocate conflicting units
+		// in stable grid order, without ever overwriting another unit or dropping a weapon.
+		for (ILogicMovable movable : displaced) {
+			ShortPoint2D center = movable.getPosition();
+			java.util.Optional<ShortPoint2D> free = HexGridArea.stream(center.x, center.y, 1, width + height)
+					.filterBounds(width, height)
+					.filter((x, y) -> movablePathfinderGrid.canOccupy(movable, new ShortPoint2D(x, y))).getFirst();
+			if (!free.isPresent()) throw new java.io.InvalidObjectException("No safe seven-cell position for saved siege weapon " + movable.getID());
+			movable.setPosition(free.get());
+		}
 	}
 
 	public FlagsGrid getFlagsGrid() {
@@ -576,13 +611,14 @@ public final class MainGrid implements Serializable {
 			if (requester.isShip()) {
 				return !isWaterSafe(x, y);
 			}
-			return flagsGrid.isBlocked(x, y) || (requester.needsPlayersGround() && requester.getPlayer().getPlayerId() != partitionsGrid.getPlayerIdAt(x, y));
+			return !MainGrid.this.isValidPosition(requester, x, y);
 		}
 
 		@Override
 		public final float getCost(IPathCalculatable requester, int sx, int sy, int tx, int ty) {
 			if(requester.getPosition().getOnGridDistTo(sx, sy) <= CommonConstants.MOVABLE_PATH_REPAIR_DISTANCE) {
-				if(!movableGrid.hasNoMovableAt(tx, ty)) return 1.5f;
+				ILogicMovable occupant = movableGrid.getOccupantAt(tx, ty);
+				if (occupant != null && occupant != requester) return 1.5f;
 			}
 			return 1;
 		}
@@ -657,7 +693,7 @@ public final class MainGrid implements Serializable {
 
 				case NON_BLOCKED_OR_PROTECTED:
 					return !(flagsGrid.isProtected(x, y) || flagsGrid.isBlocked(x, y))
-						&& (!pathCalculable.needsPlayersGround() || hasSamePlayer(x, y, pathCalculable)) && movableGrid.getMovableAt(x, y) == null;
+						&& (!pathCalculable.needsPlayersGround() || hasSamePlayer(x, y, pathCalculable)) && movableGrid.hasNoMovableAt(x, y);
 
 				case SOLDIER_BOWMAN:
 				case SOLDIER_SWORDSMAN:
@@ -1076,8 +1112,16 @@ public final class MainGrid implements Serializable {
 
 		@Override
 		public void hitWithSiegeProjectile(SiegeProjectileObject projectile) {
-			applySiegeDamage(projectile.getTargetPos(), projectile.getWeaponType(), projectile.getHitStrength(), projectile.getShooterPlayer(),
-					projectile.getSourcePos());
+			IAttackable target = projectile.getTarget();
+			// Old saves did not retain target identity. Let those shots dissipate rather than hit a replacement.
+			if (target == null || projectile.getHitStrength() <= 0 || !target.isAlive()
+					|| !MovableGrid.isEnemy(projectile.getShooterPlayer(), target)) return;
+			if (target instanceof BuildingSiegeTarget) {
+				((BuildingSiegeTarget) target).receiveSiegeHit(projectile.getHitStrength(), projectile.getSourcePos(), projectile.getShooterPlayer());
+			} else if (projectile.getWeaponType() != ESiegeWeaponType.GONG && target.getMovableType() != null
+					&& (target.getMovableType().isSiegeWeapon() || target.getMovableType().isShip())) {
+				target.receiveHit(projectile.getHitStrength(), projectile.getSourcePos(), projectile.getShooterPlayer());
+			}
 		}
 
 		@Override
@@ -1227,7 +1271,8 @@ public final class MainGrid implements Serializable {
 
 		@Override
 		public boolean canUsePositionForConstruction(int x, int y, Set<ELandscapeType> allowedGroundTypes, short partitionId) {
-			return isInBounds(x, y)
+			ILogicMovable occupant = movableGrid.getOccupantAt(x, y);
+			return (occupant == null || !occupant.getMovableType().isSiegeWeapon()) && isInBounds(x, y)
 				&& !flagsGrid.isProtected(x, y)
 				&& partitionsGrid.getPartitionIdAt(x, y) == partitionId
 				&& allowedGroundTypes.contains(landscapeGrid.getLandscapeTypeAt(x, y));
@@ -1528,12 +1573,52 @@ public final class MainGrid implements Serializable {
 		}
 
 		@Override
+		public ILogicMovable getOccupantAt(int x, int y) {
+			return movableGrid.getOccupantAt(x, y);
+		}
+
+		@Override
+		public boolean canSpawnAt(EMovableType type, Player player, ShortPoint2D position) {
+			if (type.isSiegeWeapon()) return siegeTerrainValid(position.x, position.y)
+					&& movableGrid.findBlockingMovable(null, position, true) == null;
+			return isFreePosition(position.x, position.y)
+					&& !landscapeGrid.isBlockedFor(position.x, position.y, type.isShip());
+		}
+
+		@Override
+		public boolean canOccupy(ILogicMovable movable, ShortPoint2D position) {
+			return MainGrid.this.isValidPosition(movable, position.x, position.y)
+					&& findBlockingMovable(movable, position) == null;
+		}
+
+		@Override
+		public ILogicMovable findBlockingMovable(ILogicMovable movable, ShortPoint2D position) {
+			return movableGrid.findBlockingMovable(movable, position, movable.getMovableType().isSiegeWeapon());
+		}
+
+		@Override
+		public boolean tryMovePosition(ILogicMovable movable, ShortPoint2D from, ShortPoint2D to) {
+			if (movable.getMovableType().isSiegeWeapon()) {
+				if (!canOccupy(movable, to)) return false;
+			} else {
+				ILogicMovable owner = movableGrid.getOccupantAt(to.x, to.y);
+				if (owner != null && owner != movable && owner.getMovableType().isSiegeWeapon()) return false;
+			}
+			leavePosition(from, movable);
+			enterPosition(to, movable, false);
+			return true;
+		}
+
+		@Override
 		public void leavePosition(ShortPoint2D position, ILogicMovable movable) {
 			movableGrid.movableLeft(position, movable);
 		}
 
 		@Override
 		public void enterPosition(ShortPoint2D position, ILogicMovable movable, boolean informFullArea) {
+			if (movable.getMovableType().isSiegeWeapon() && !canOccupy(movable, position)) {
+				throw new IllegalStateException("Cannot occupy siege footprint at " + position);
+			}
 			movableGrid.movableEntered(position, movable);
 
 			if(movable instanceof IAttackableMovable) {
@@ -1715,8 +1800,8 @@ public final class MainGrid implements Serializable {
 
 		@Override
 		public void addSiegeProjectile(ShortPoint2D shooterPos, IPlayer shooterPlayer, ESiegeWeaponType weaponType, float hitStrength,
-				ShortPoint2D attackedPos) {
-			mapObjectsManager.addSiegeProjectile(attackedPos, shooterPos, shooterPlayer, weaponType, hitStrength);
+				IAttackable target) {
+			mapObjectsManager.addSiegeProjectile(target, shooterPos, shooterPlayer, weaponType, hitStrength);
 		}
 
 		@Override
@@ -1924,7 +2009,9 @@ public final class MainGrid implements Serializable {
 				short x = curr.x;
 				short y = curr.y;
 
-				if (!isInBounds(x, y) || flagsGrid.isProtected(x, y) || flagsGrid.isBlocked(x, y)) {
+				ILogicMovable occupant = movableGrid.getOccupantAt(x, y);
+				if (!isInBounds(x, y) || flagsGrid.isProtected(x, y) || flagsGrid.isBlocked(x, y)
+						|| (occupant != null && occupant.getMovableType().isSiegeWeapon())) {
 					return false;
 				}
 			}

@@ -35,6 +35,7 @@ import jsettlers.common.mapobject.IMapObject;
 import jsettlers.common.material.EMaterialType;
 import jsettlers.common.material.ESearchType;
 import jsettlers.common.movable.EDirection;
+import jsettlers.common.movable.EMovableType;
 import jsettlers.common.movable.ESiegeWeaponType;
 import jsettlers.common.movable.IGraphicsMovable;
 import jsettlers.common.player.IPlayer;
@@ -137,6 +138,39 @@ public class MovableTestsMap implements IGraphicsGrid, IAStarPathMap {
 
 	private final AbstractMovableGrid movableGrid = new AbstractMovableGrid() {
 		private static final long serialVersionUID = 610513829074598238L;
+
+		// This movement demo models single-cell units only; siege footprints require MainGrid.
+		@Override
+		public ILogicMovable getOccupantAt(int x, int y) {
+			return isInBounds(x, y) ? movableMap[x][y] : null;
+		}
+
+		@Override
+		public boolean canSpawnAt(EMovableType type, Player player, ShortPoint2D position) {
+			return !type.isSiegeWeapon() && !type.isShip() && isFreePosition(position.x, position.y);
+		}
+
+		@Override
+		public ILogicMovable findBlockingMovable(ILogicMovable movable, ShortPoint2D position) {
+			ILogicMovable occupant = getOccupantAt(position.x, position.y);
+			return occupant == movable ? null : occupant;
+		}
+
+		@Override
+		public boolean canOccupy(ILogicMovable movable, ShortPoint2D position) {
+			return !movable.getMovableType().isSiegeWeapon()
+					&& isValidPosition(movable, position.x, position.y)
+					&& findBlockingMovable(movable, position) == null;
+		}
+
+		@Override
+		public boolean tryMovePosition(ILogicMovable movable, ShortPoint2D from, ShortPoint2D to) {
+			if (movable.getMovableType().isSiegeWeapon() || !isInBounds(to.x, to.y)) return false;
+			// Preserve the ordinary units' existing swap/push behavior.
+			leavePosition(from, movable);
+			enterPosition(to, movable, false);
+			return true;
+		}
 
 		@Override
 		public void leavePosition(ShortPoint2D position, ILogicMovable movable) {
@@ -431,6 +465,9 @@ public class MovableTestsMap implements IGraphicsGrid, IAStarPathMap {
 
 		@Override
 		public void enterPosition(ShortPoint2D position, ILogicMovable movable, boolean informFullArea) {
+			if (movable.getMovableType().isSiegeWeapon()) {
+				throw new UnsupportedOperationException("Use MainGrid for seven-cell siege weapons; this demo supports single-cell units only.");
+			}
 			movableMap[position.x][position.y] = movable;
 		}
 
@@ -466,7 +503,7 @@ public class MovableTestsMap implements IGraphicsGrid, IAStarPathMap {
 
 		@Override
 		public void addSiegeProjectile(ShortPoint2D shooterPos, IPlayer shooterPlayer, ESiegeWeaponType weaponType, float hitStrength,
-				ShortPoint2D attackedPos) {
+				IAttackable target) {
 		}
 
 		@Override
