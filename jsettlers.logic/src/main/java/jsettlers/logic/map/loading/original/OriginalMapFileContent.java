@@ -385,6 +385,10 @@ public class OriginalMapFileContent implements IMutableMapData {
 		return new ShortPoint2D(mapPlayerInfos[player].startX, mapPlayerInfos[player].startY);
 	}
 
+	public EOriginalMapCivilizations getPlayerCivilization(int player) {
+		return mapPlayerInfos[player].nation;
+	}
+
 	@Override
 	public int getPlayerCount() {
 		return mapPlayerInfos.length;

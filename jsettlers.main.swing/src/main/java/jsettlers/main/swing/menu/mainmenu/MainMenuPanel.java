@@ -41,6 +41,10 @@ import jsettlers.logic.player.InitialGameState;
 import jsettlers.logic.player.PlayerSetting;
 import jsettlers.main.JSettlersGame;
 import jsettlers.main.swing.JSettlersFrame;
+import jsettlers.main.swing.menu.campaign.CampaignPanel;
+import jsettlers.main.swing.menu.campaign.CampaignCatalog;
+import java.io.IOException;
+import javax.swing.JOptionPane;
 import jsettlers.main.swing.lookandfeel.ELFStyle;
 import jsettlers.main.swing.lookandfeel.components.SplitedBackgroundPanel;
 import jsettlers.main.swing.menu.multiplayer.lan.LANConnectionPanel;
@@ -75,6 +79,7 @@ public class MainMenuPanel extends SplitedBackgroundPanel {
 	private final JPanel mainButtonPanel = new JPanel();
 
 	private final OpenPanel openSinglePlayerPanel;
+	private CampaignPanel campaignPanel;
 
 	public MainMenuPanel(JSettlersFrame settlersFrame) {
 		this.settlersFrame = settlersFrame;
@@ -84,6 +89,15 @@ public class MainMenuPanel extends SplitedBackgroundPanel {
 		SettingsMenuPanel settingsPanel = new SettingsMenuPanel(this);
 
 		registerMenu("main-panel-new-single-player-game-button", e -> setCenter("main-panel-new-single-player-game-button", openSinglePlayerPanel));
+		registerMenu("campaign-title", e -> {
+			try {
+				if (campaignPanel == null) campaignPanel = new CampaignPanel(settlersFrame, settlersFrame.getCampaignProgress());
+				campaignPanel.refresh();
+				setCenter("campaign-title", campaignPanel);
+			} catch (IOException error) {
+				JOptionPane.showMessageDialog(this, Labels.getString("campaign-progress-failed") + "\n" + error.getMessage(), Labels.getString("campaign-title"), JOptionPane.ERROR_MESSAGE);
+			}
+		});
 		registerMenu("start-loadgame", e -> setCenter("start-loadgame", openSaveGamePanel));
 		registerMenu("settings-title", e -> {
 			setCenter("settings-title", settingsPanel);
@@ -186,8 +200,14 @@ public class MainMenuPanel extends SplitedBackgroundPanel {
 			PlayerSetting[] playerSettings = mapFileHeader.getPlayerSettings();
 			byte playerId = mapFileHeader.getPlayerId();
 			JSettlersGame game = new JSettlersGame(savegameLoader, new InitialGameState(playerId, playerSettings, -1));
+			CampaignCatalog.Mission mission = null;
+			try {
+				mission = settlersFrame.getCampaignProgress().missionForMap(mapFileHeader.getBaseMapId());
+			} catch (IOException error) {
+				JOptionPane.showMessageDialog(this, Labels.getString("campaign-progress-failed") + "\n" + error.getMessage(), Labels.getString("campaign-title"), JOptionPane.ERROR_MESSAGE);
+			}
 			IStartingGame startingGame = game.start();
-			settlersFrame.showStartingGamePanel(startingGame);
+			settlersFrame.showStartingGamePanel(startingGame, mission);
 		}
 	}
 

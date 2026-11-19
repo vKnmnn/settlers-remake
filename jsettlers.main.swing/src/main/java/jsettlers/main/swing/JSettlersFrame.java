@@ -48,6 +48,12 @@ import jsettlers.main.swing.menu.joinpanel.JoinGamePanel;
 import jsettlers.main.swing.menu.mainmenu.MainMenuPanel;
 import jsettlers.main.swing.menu.startinggamemenu.StartingGamePanel;
 import jsettlers.main.swing.menu.statspanel.EndgameStatsPanel;
+import jsettlers.main.swing.menu.campaign.CampaignCatalog;
+import jsettlers.main.swing.menu.campaign.CampaignProgress;
+import jsettlers.main.swing.menu.campaign.CampaignSession;
+import jsettlers.common.resources.ResourceManager;
+import java.io.IOException;
+import javax.swing.JOptionPane;
 import jsettlers.main.swing.settings.SettingsManager;
 
 /**
@@ -64,6 +70,7 @@ public class JSettlersFrame extends JFrame {
 
 	private Timer redrawTimer;
 	private EndgameMonitor endgameMonitor;
+	private final CampaignSession campaignSession = new CampaignSession(ResourceManager.getResourcesDirectory().toPath().resolve("campaign-progress.properties"));
 	private JDialog resultDialog;
 	private IStartedGame displayedGame;
 	private boolean fullScreen = false;
@@ -128,10 +135,20 @@ public class JSettlersFrame extends JFrame {
 	}
 
 	public void showMainMenu() {
+		campaignSession.cancel();
 		setNewContentPane(mainPanel);
 	}
 
+	public CampaignProgress getCampaignProgress() throws IOException {
+		return campaignSession.getProgress();
+	}
+
 	public void showStartingGamePanel(IStartingGame startingGame) {
+		showStartingGamePanel(startingGame, null);
+	}
+
+	public void showStartingGamePanel(IStartingGame startingGame, CampaignCatalog.Mission mission) {
+		campaignSession.prepare(mission);
 		startingGamePanel.setStartingGame(startingGame);
 		setNewContentPane(startingGamePanel);
 	}
@@ -202,6 +219,7 @@ public class JSettlersFrame extends JFrame {
 
 	private void showGameResult(IStartedGame game) {
 		if (game != displayedGame || game.isShutdownFinished()) return;
+		recordCampaignResult(game);
 		JDialog dialog = new JDialog(this, Labels.getString("stats-panel-title"), false);
 		resultDialog = dialog;
 		EndgameStatsPanel panel = new EndgameStatsPanel(dialog::dispose, () -> {
@@ -219,6 +237,7 @@ public class JSettlersFrame extends JFrame {
 
 	public void showEndgameStatistics(IStartedGame game) {
 		if (game != displayedGame) return;
+		recordCampaignResult(game);
 		closeResultDialog();
 		displayedGame = null;
 		if(areaContainer != null) {
@@ -230,11 +249,20 @@ public class JSettlersFrame extends JFrame {
 		setNewContentPane(endgameStatsPanel);
 	}
 
+	private void recordCampaignResult(IStartedGame game) {
+		try {
+			campaignSession.recordResult(game);
+		} catch (IOException e) {
+			JOptionPane.showMessageDialog(this, Labels.getString("campaign-progress-failed") + "\n" + e.getMessage(), Labels.getString("campaign-title"), JOptionPane.ERROR_MESSAGE);
+		}
+	}
+
 	public IMapInterfaceConnector showStartedGame(IStartedGame startedGame) {
 		MapContent content = new MapContent(startedGame, soundPlayer, ETextDrawPosition.DESKTOP);
 		SwingUtilities.invokeLater(() -> {
 			closeResultDialog();
 			displayedGame = startedGame;
+			campaignSession.started(startedGame.isMultiplayerGame());
 			setContent(content);
 			endgameMonitor = new EndgameMonitor(startedGame,
 					this::showGameResult);
