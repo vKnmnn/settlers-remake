@@ -329,16 +329,8 @@ public class MageMovable extends AttackableHumanMovable implements IMageMovable 
 			case GIFTS:
 				for (int packageIndex = 0; packageIndex < ESpellType.GIFTS_MAX_STACKS; packageIndex++) {
 					GiftDistribution.Gift gift = GiftDistribution.sample(player.getCivilisation(), MatchConstants.random()::nextInt);
-					spellRegion(ESpellType.GIFTS_RADIUS)
-							.filter((x, y) -> !grid.isBlockedOrProtected(x, y))
-							.limit(1)
-							.forEach((x, y) -> {
-								ShortPoint2D at = new ShortPoint2D(x, y);
-								for (int i = 0; i < gift.getAmount(); i++) {
-									if (!grid.dropMaterial(at, gift.getMaterial(), true, false)) break;
-								}
-								effectLocations.add(at);
-							});
+					grid.dropGift(currentTarget, gift.getMaterial(), gift.getAmount()).stream()
+							.filter(at -> !effectLocations.contains(at)).forEach(effectLocations::add);
 				}
 				duration = 1;
 				sound = 78;

@@ -18,6 +18,8 @@ import jsettlers.algorithms.path.IPathCalculatable;
 import jsettlers.algorithms.path.Path;
 import jsettlers.common.mapobject.EMapObjectType;
 import jsettlers.common.material.ESearchType;
+import jsettlers.common.material.EMaterialType;
+import java.util.List;
 import jsettlers.common.position.ShortPoint2D;
 import jsettlers.logic.player.Player;
 
@@ -28,6 +30,9 @@ import jsettlers.logic.player.Player;
  */
 public abstract class AbstractMovableGrid extends AbstractStrategyGrid {
 	private static final long serialVersionUID = -236805842467532505L;
+
+	/** Places a divine gift and returns one destination per successfully offered unit. */
+	public abstract List<ShortPoint2D> dropGift(ShortPoint2D target, EMaterialType material, int amount);
 
 	/**
 	 * Checks if there is a movable at the given position.

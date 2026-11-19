@@ -18,6 +18,8 @@ import java.io.IOException;
 import java.io.ObjectInputStream;
 import java.io.Serializable;
 import java.util.PriorityQueue;
+import java.util.ArrayList;
+import java.util.List;
 
 import jsettlers.common.landscape.EResourceType;
 import jsettlers.common.map.shapes.HexGridArea;
@@ -503,6 +505,59 @@ public final class MapObjectsManager implements IScheduledTimerable, Serializabl
 					pushMaterial(currX, currY, materialType);
 					return Optional.of(new ShortPoint2D(currX, currY));
 				}).orElse(null);
+	}
+
+	/**
+	 * Original gift search: compatible ordinary stacks lead empty-cell placement by
+	 * 37 offsets. The offset budget includes out-of-bounds and unusable positions.
+	 * Returns one location per deposited unit so the caller can register offers.
+	 */
+	public List<ShortPoint2D> dropGift(ShortPoint2D target, EMaterialType material, int amount) {
+		List<ShortPoint2D> deposited = new ArrayList<>();
+		for (int i = 0; i < GiftSearchOffsets.OFFSETS.size() && amount > 0; i++) {
+			ShortPoint2D at = giftPosition(target, GiftSearchOffsets.OFFSETS.get(i));
+			if (at != null && grid.getMapObject(at.x, at.y, EMapObjectType.STACK_OBJECT) != null
+					&& canForcePushMaterial(at.x, at.y, material)) {
+				amount = fillGiftStack(at, material, amount, deposited);
+			}
+			if (amount > 0 && i >= 37) {
+				at = giftPosition(target, GiftSearchOffsets.OFFSETS.get(i - 37));
+				if (at != null && canCreateGiftStack(at)) {
+					amount = fillGiftStack(at, material, amount, deposited);
+				}
+			}
+		}
+		return deposited;
+	}
+
+	private boolean canCreateGiftStack(ShortPoint2D at) {
+		if (grid.isProtected(at.x, at.y) || grid.hasMovableAt(at.x, at.y)) {
+			return false;
+		}
+		for (ShortPoint2D neighbor : new HexGridArea(at, 1)) {
+			if (grid.isInBounds(neighbor.x, neighbor.y)
+					&& grid.getMapObject(neighbor.x, neighbor.y, EMapObjectType.STACK_OBJECT) != null) {
+				return false;
+			}
+		}
+		return true;
+	}
+
+	private ShortPoint2D giftPosition(ShortPoint2D target, ShortPoint2D offset) {
+		int x = target.x + offset.x;
+		int y = target.y + offset.y;
+		if (!grid.isInBounds(x, y) || grid.isBlocked(x, y) || grid.isBuildingAreaAt((short) x, (short) y)) {
+			return null;
+		}
+		return new ShortPoint2D(x, y);
+	}
+
+	private int fillGiftStack(ShortPoint2D at, EMaterialType material, int amount, List<ShortPoint2D> deposited) {
+		while (amount > 0 && canForcePushMaterial(at.x, at.y, material) && pushMaterial(at.x, at.y, material)) {
+			deposited.add(at);
+			amount--;
+		}
+		return amount;
 	}
 
 	/**

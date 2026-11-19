@@ -9,6 +9,10 @@ import jsettlers.logic.movable.Movable;
 import jsettlers.common.player.ECivilisation;
 import jsettlers.common.position.ShortPoint2D;
 import jsettlers.logic.constants.MatchConstants;
+import jsettlers.logic.constants.ExtendedRandom;
+import jsettlers.logic.movable.military.GiftDistribution;
+import java.util.EnumMap;
+import java.util.Map;
 import jsettlers.logic.movable.military.MageMovable;
 import jsettlers.logic.player.Player;
 import jsettlers.logic.player.PlayerSetting;
@@ -20,10 +24,7 @@ import org.junit.Test;
 
 import static org.junit.Assert.*;
 
-/**
- * Exercises the real priest command and material stacks. Placement deliberately tests
- * the current radius-three free-cell policy, not the original offset search/stack merging.
- */
+/** Exercises the real priest command, including package quantities and material placement. */
 public class MageGiftTest {
     private static final ShortPoint2D TARGET = new ShortPoint2D(13, 12);
     private MainGrid grid;
@@ -44,38 +45,48 @@ public class MageGiftTest {
         JSettlersGame.clearState();
     }
 
-    @Test public void freeLandReceivesFourPositiveMaterialStacks() {
+    @Test public void freeLandReceivesAllFourPackagesWithExactSeededQuantities() {
+        Map<EMaterialType, Integer> expected = new EnumMap<>(EMaterialType.class);
+        ExtendedRandom random = new ExtendedRandom(12345L);
+        for (int i = 0; i < 4; i++) {
+            GiftDistribution.Gift gift = GiftDistribution.sample(ECivilisation.ROMAN, random::nextInt);
+            expected.merge(gift.getMaterial(), gift.getAmount(), Integer::sum);
+        }
+        MatchConstants.random().setSeed(12345L);
         cast();
-        int[] stacksAndGoods = new int[2];
-        region().stream().forEach((x, y) -> {
-            int goods = amountAt(x, y);
-            if (goods > 0) {
-                stacksAndGoods[0]++;
-                stacksAndGoods[1] += goods;
-                assertTrue(goods <= 7);
+        for (EMaterialType material : EMaterialType.values()) {
+            int total = 0;
+            for (short y = 0; y < 64; y++) for (short x = 0; x < 64; x++) {
+                int amount = grid.mapObjectsManager.getStackSize(x, y, material);
+                assertTrue(amount <= 8);
+                total += amount;
             }
-        });
-        assertEquals(4, stacksAndGoods[0]);
-        assertTrue(stacksAndGoods[1] >= 4);
+            assertEquals(expected.getOrDefault(material, 0).intValue(), total);
+        }
     }
 
-    @Test public void blockedRegionReceivesNothingAndExistingStackIsUnchanged() {
+    @Test public void blockedLocalRegionIsUnchangedWhileGiftsArePlacedBeyondIt() {
         assertTrue(grid.movablePathfinderGrid.dropMaterial(TARGET, EMaterialType.PLANK, false, false));
         region().stream().forEach((x, y) -> grid.flagsGrid.setBlockedAndProtected(x, y, true));
         cast();
         region().stream().forEach((x, y) -> assertEquals(
                 x == TARGET.x && y == TARGET.y ? 1 : 0, amountAt(x, y)));
         assertEquals(1, grid.mapObjectsManager.getStackSize(TARGET.x, TARGET.y, EMaterialType.PLANK));
+        assertTrue(totalGoods() > 1);
     }
 
-    @Test public void oneFreeCellReceivesOnlyOnePackageWithoutOverflowIntoBlockedCells() {
-        region().stream().forEach((x, y) -> grid.flagsGrid.setBlockedAndProtected(x, y,
-                x != TARGET.x || y != TARGET.y));
+    @Test public void fullyBlockedMapCannotReceiveGifts() {
+        for (int y = 0; y < 64; y++) for (int x = 0; x < 64; x++) {
+            grid.flagsGrid.setBlockedAndProtected(x, y, true);
+        }
         cast();
-        assertTrue(amountAt(TARGET.x, TARGET.y) > 0);
-        region().stream().forEach((x, y) -> {
-            if (x != TARGET.x || y != TARGET.y) assertEquals(0, amountAt(x, y));
-        });
+        assertEquals(0, totalGoods());
+    }
+
+    private int totalGoods() {
+        int total = 0;
+        for (int y = 0; y < 64; y++) for (int x = 0; x < 64; x++) total += amountAt(x, y);
+        return total;
     }
 
     private void cast() {

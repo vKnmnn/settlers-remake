@@ -978,6 +978,11 @@ public final class MainGrid implements Serializable {
 	}
 
 	final class MapObjectsManagerGrid implements IMapObjectsManagerGrid {
+		@Override
+		public boolean hasMovableAt(int x, int y) {
+			return movableGrid.getMovableAt(x, y) != null;
+		}
+
 		private static final long serialVersionUID = 6223899915568781576L;
 
 		@Override
@@ -1405,6 +1410,16 @@ public final class MainGrid implements Serializable {
 			}
 
 			return successful;
+		}
+
+		@Override
+		public List<ShortPoint2D> dropGift(ShortPoint2D target, EMaterialType material, int amount) {
+			List<ShortPoint2D> destinations = mapObjectsManager.dropGift(target, material, amount);
+			for (ShortPoint2D destination : destinations) {
+				partitionsGrid.getPartitionAt(destination.x, destination.y)
+						.addOffer(destination, material, EOfferPriority.OFFER_TO_ALL);
+			}
+			return destinations;
 		}
 
 		@Override

@@ -46,6 +46,8 @@ public interface IMapObjectsManagerGrid extends Serializable, IArrowAttackableGr
 
 	boolean isInBounds(int x, int y);
 
+	boolean hasMovableAt(int x, int y);
+
 	EResourceType getResourceTypeAt(int x, int y);
 
 	byte getResourceAmountAt(int x, int y);

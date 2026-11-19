@@ -355,12 +355,31 @@ draws in [0, 65536); quantity is `draw % ((n + 1) / 2) + n / 2`.
 The previous uniform draw over every material enum could produce unusable goods
 or empty gifts. The unsupported own-team territory restriction is removed.
 
-Placement still uses the remake's radius-three free-cell search. Original
-`005046b0` searches up to 10,000 offsets and can merge compatible stacks; that
-placement algorithm is not reproduced here. Crowded target areas can therefore
-receive fewer packages. Random draws still occur for all four packages, including
-when no space is available. Original executable/decompiled code stays outside
-the repository; only behavioral findings are recorded here.
+Placement now follows `005046b0`: up to 10,000 offsets are examined, including
+out-of-bounds positions in the budget. Existing compatible ordinary stacks have
+a 37-offset head start over empty-cell placement. Full stacks retain their eight
+units, and excess goods continue to subsequent destinations. Building areas,
+blocked cells, incompatible stacks and protected empty cells are excluded using
+the remake's map rules. New stacks also avoid occupied unit positions and the
+six neighbors of existing stacks. Each deposited unit is registered as a transport offer
+at its actual destination. Four packages need not produce four distinct stacks.
+
+The offset order is reconstructed from initializer `00516530`: 5,000 wedge
+points are stably ordered by `2500 * (2*x-y)^2 + 7569*y^2`, then expanded in the
+original six rotations, with the origin first. The gift search uses the first
+10,000 entries. This reproduces the original search order and stack preference;
+the original's map occupancy flags are mapped to the remake's own terrain and
+building protections, rather than copying its memory layout. No original assets
+or decompiled source are distributed.
+
+Random draws still occur for all four packages when no space is available.
+Stack merging and displaced placement do not consume additional random numbers.
 
 Validation: all 118 logic unit tests and 23 graphics tests pass, including the
 new teleport, gift distribution and actual-grid gift scenarios.
+
+Follow-up placement validation: all 132 logic unit tests pass. Dedicated cases
+cover the offset order, stack merging/overflow, building stores, occupied cells,
+stack spacing, blocked neighborhoods, map corners and transport offers at the
+actual destinations. The lightweight movable test-map does not model gift stacks;
+its gift operation is a no-op, like its other unsupported priest terrain actions.

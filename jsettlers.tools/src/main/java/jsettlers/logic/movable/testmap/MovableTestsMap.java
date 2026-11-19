@@ -15,6 +15,7 @@
 package jsettlers.logic.movable.testmap;
 
 import java.util.LinkedList;
+import java.util.List;
 
 import java.util.Objects;
 import jsettlers.algorithms.path.IPathCalculatable;
@@ -262,6 +263,12 @@ public class MovableTestsMap implements IGraphicsGrid, IAStarPathMap {
 			materials.add(pos);
 
 			return true;
+		}
+
+		@Override
+		public List<ShortPoint2D> dropGift(ShortPoint2D target, EMaterialType material, int amount) {
+			// This movement-only fixture has no ordinary stack or transport-offer grid.
+			return java.util.Collections.emptyList();
 		}
 
 		@Override
