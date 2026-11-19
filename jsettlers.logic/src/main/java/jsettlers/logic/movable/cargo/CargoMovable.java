@@ -34,6 +34,7 @@ public abstract class CargoMovable extends AttackableMovable implements ITrader 
 		Root<CargoMovable> cargoBehaviour = new Root<>(createCargoBehaviour());
 		MovableManager.registerBehaviour(EMovableType.CARGO_SHIP, cargoBehaviour);
 		MovableManager.registerBehaviour(EMovableType.DONKEY, cargoBehaviour);
+		MovableManager.registerBehaviour(EMovableType.WHITEFLAGGED_DONKEY, cargoBehaviour);
 	}
 
 	private static Node<CargoMovable> createCargoBehaviour() {
