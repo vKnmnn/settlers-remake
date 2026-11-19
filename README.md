@@ -87,6 +87,26 @@ Desktop archives are written to `release/`. The test commands run desktop unit
 tests and a save/load round trip; they do not claim full replay determinism or
 AI balance coverage. See [fork integration notes](docs/fork-integration.md).
 
+### CI packages
+
+Every push, pull request, or manual run of [CI](.github/workflows/CI.yml) builds
+independent desktop and Android artifacts under the run's **Artifacts** section:
+
+- **JSettlers-Desktop**: `JSettlers.zip`, the portable Java distribution for
+  Linux, Windows and macOS, including their native graphics libraries. Java 11+
+  is required; a runtime is not bundled.
+- **JSettlers-Server**: the standalone dedicated-server JAR.
+- **JSettlers-Android-debug**: an installable debug APK plus the Android ZIP.
+  This uses Android's debug signing, not a Play Store/release signing key.
+  CI debug certificates can change between builds; reinstalling may be necessary
+  instead of updating an existing installation. Back up saved games first.
+
+Android builds run separately from desktop and tests, so a failure on one
+platform does not prevent the others from producing their packages. To build
+Android locally, set `ANDROID_HOME` to an SDK containing platform 30 and Build
+Tools 34.0.0, then run `./gradlew --max-workers=2 releaseAndroid` without
+`-PskipAndroid`. No original Settlers III game assets are included in these packages.
+
 The [build instructions](https://github.com/paulwedeck/settlers-remake/wiki/Compiling-using-gradle) and the [developer's guide](https://github.com/paulwedeck/settlers-remake/wiki/Developer's%20Guide) can be found in our wiki.
 
 Building JSettlers requires a JDK 17 or newer (JDK 21 is recommended), because the build uses Gradle 8 and the Android Gradle Plugin 8. The built game still runs with Java 11 or newer.

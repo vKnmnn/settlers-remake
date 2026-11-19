@@ -3,9 +3,14 @@ name: CI
 on:
   pull_request:
   push:
+  workflow_dispatch:
+
+permissions:
+  contents: read
 
 jobs:
-  build:
+  desktop:
+    name: Desktop (Linux, Windows, macOS)
     runs-on: ubuntu-latest
     timeout-minutes: 20
     steps:
@@ -15,11 +20,61 @@ jobs:
         distribution: 'temurin'
         java-version: '21'
     - uses: gradle/actions/setup-gradle@v4
-    - run: ./gradlew -PskipAndroid --max-workers=2 release
+    - run: ./gradlew -PskipAndroid --max-workers=2 releaseJSettlers
     - uses: actions/upload-artifact@v4
       with:
-        name: Release
-        path: 'release/*'
+        name: JSettlers-Desktop
+        path: release/JSettlers.zip
+        if-no-files-found: error
+
+  server:
+    name: Dedicated server
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+    - uses: actions/checkout@v4
+    - uses: actions/setup-java@v4
+      with:
+        distribution: 'temurin'
+        java-version: '21'
+    - uses: gradle/actions/setup-gradle@v4
+    - run: ./gradlew -PskipAndroid --max-workers=2 releaseDedicatedServer
+    - uses: actions/upload-artifact@v4
+      with:
+        name: JSettlers-Server
+        path: release/*.jar
+        if-no-files-found: error
+
+  android:
+    name: Android APK (debug)
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+    - uses: actions/checkout@v4
+      with:
+        fetch-depth: 0 # Android versionName is derived from Git tags.
+    - uses: actions/setup-java@v4
+      with:
+        distribution: 'temurin'
+        java-version: '21'
+    - uses: android-actions/setup-android@v3
+      with:
+        packages: 'platform-tools platforms;android-30 build-tools;34.0.0'
+        log-accepted-android-sdk-licenses: false
+    - uses: gradle/actions/setup-gradle@v4
+    - name: Build installable debug package
+      run: ./gradlew --max-workers=2 releaseAndroid
+    - name: Verify APK is present in the package
+      run: |
+        unzip -p release/JSettlers-Android.zip JSettlers-Android/JSettlers-Android.apk > /tmp/JSettlers-Android.apk
+        test -s /tmp/JSettlers-Android.apk
+    - uses: actions/upload-artifact@v4
+      with:
+        name: JSettlers-Android-debug
+        path: |
+          release/JSettlers-Android.zip
+          jsettlers.main.android/build/outputs/apk/debug/*.apk
+        if-no-files-found: error
 
   tests:
     runs-on: ubuntu-latest
