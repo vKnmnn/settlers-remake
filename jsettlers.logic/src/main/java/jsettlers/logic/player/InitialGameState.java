@@ -10,15 +10,22 @@ import java.io.Serializable;
 import java.util.Arrays;
 
 public class InitialGameState implements Cloneable, Serializable {
+	private static final long serialVersionUID = 4226604173451490234L;
 
 	private final byte playerId;
 	private final PlayerSetting[] playerSettings;
 	private final long randomSeed;
 	private final EMapStartResources startResources;
+	private final MatchRules matchRules;
 
-	private static final byte VERSION = 1;
+	private static final byte VERSION = 2;
 
 	public InitialGameState(byte playerId, PlayerSetting[] playerSettings, long randomSeed, EMapStartResources startResources) {
+		this(playerId, playerSettings, randomSeed, startResources, MatchRules.DEFAULT);
+	}
+
+	public InitialGameState(byte playerId, PlayerSetting[] playerSettings, long randomSeed, EMapStartResources startResources, MatchRules matchRules) {
+		this.matchRules = java.util.Objects.requireNonNull(matchRules, "matchRules");
 		this.playerId = playerId;
 		this.playerSettings = playerSettings;
 		this.randomSeed = randomSeed;
@@ -42,6 +49,18 @@ public class InitialGameState implements Cloneable, Serializable {
 			playerSettings[i] = PlayerSetting.readFromStream(dis);
 		}
 
+		if (readVersion >= 2) {
+			int mode = dis.readUnsignedByte();
+			if (mode >= MatchRules.Mode.values().length) throw new IOException("Unknown match mode: " + mode);
+			matchRules = new MatchRules(MatchRules.Mode.values()[mode]);
+		} else {
+			matchRules = MatchRules.DEFAULT;
+		}
+	}
+
+	/** Null occurs when reading Java saves created before match rules were added. */
+	public MatchRules getMatchRules() {
+		return matchRules == null ? MatchRules.DEFAULT : matchRules;
 	}
 
 	public byte getPlayerId() {
@@ -79,11 +98,12 @@ public class InitialGameState implements Cloneable, Serializable {
 		for (PlayerSetting playerSetting : playerSettings) {
 			playerSetting.writeTo(dos);
 		}
+		dos.writeByte(getMatchRules().getMode().ordinal());
 	}
 
 	@Override
 	public InitialGameState clone() {
-		return new InitialGameState(playerId, getReplayablePlayerSettings(), randomSeed, startResources);
+		return new InitialGameState(playerId, getReplayablePlayerSettings(), randomSeed, startResources, getMatchRules());
 	}
 
 	@Override

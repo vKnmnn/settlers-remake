@@ -14,6 +14,9 @@ import jsettlers.logic.player.PlayerSetting;
 
 /** Campaigns use their authored settlers, buildings and goods, not skirmish starting resources. */
 public final class CampaignMapLoader extends OriginalMapLoader {
+	@Override
+	public boolean supportsCustomMatchRules() { return false; }
+
 	public CampaignMapLoader(File file) throws MapLoadException { super(new ListedMapFile(file)); }
 
 	public InitialGameState initialState(long seed) throws MapLoadException {

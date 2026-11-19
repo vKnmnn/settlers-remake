@@ -23,7 +23,9 @@ import java.util.Vector;
 public enum EMapStartResources {
 	LOW_GOODS(1),
 	MEDIUM_GOODS(2),
-	HIGH_GOODS(3);
+	HIGH_GOODS(3),
+	/** Resolve using the selected map before generating any objects. Appended for replay compatibility. */
+	MAP_DEFAULT(0);
 
 	public final int value;
 
@@ -33,7 +35,7 @@ public enum EMapStartResources {
 
 	public static EMapStartResources fromMapValue(int mapValue) {
 		for (int i = 0; i < EMapStartResources.values().length; i++) {
-			if (EMapStartResources.values()[i].value == mapValue)
+			if (EMapStartResources.values()[i] != MAP_DEFAULT && EMapStartResources.values()[i].value == mapValue)
 				return EMapStartResources.values()[i];
 		}
 
@@ -43,6 +45,7 @@ public enum EMapStartResources {
 	}
 
 	public static List<MapDataObject> generateStackObjects(EMapStartResources mapStartResources) {
+		if (mapStartResources == MAP_DEFAULT) throw new IllegalArgumentException("Resolve map default before generating resources");
 		List<MapDataObject> goods = new Vector<>();
 		switch (mapStartResources) {
 		case LOW_GOODS:
@@ -117,6 +120,7 @@ public enum EMapStartResources {
 	}
 
 	public static List<MapDataObject> generateMovableObjects(EMapStartResources mapStartResources, byte playerId) {
+		if (mapStartResources == MAP_DEFAULT) throw new IllegalArgumentException("Resolve map default before generating settlers");
 		List<MapDataObject> movables = new Vector<>();
 		switch (mapStartResources) {
 		case LOW_GOODS:
@@ -169,6 +173,7 @@ public enum EMapStartResources {
 	public void addStartTowerMaterialsAndSettlers(PlayerSetting[] playerSettings, IMutableMapData map) {
 		// start resources were already placed during map creation
 		if(map.hasStartBuildings()) return;
+		if (this == MAP_DEFAULT) throw new IllegalArgumentException("Resolve map default before placing start objects");
 
 		for (byte playerId = 0; playerId < playerSettings.length; playerId++) {
 			if (!playerSettings[playerId].isAvailable()) continue;

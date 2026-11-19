@@ -26,6 +26,9 @@ import jsettlers.logic.player.PlayerSetting;
  */
 public interface IGameCreator {
 
+	/** Whether pre-game choices may replace the map's victory rules. */
+	default boolean supportsCustomMatchRules() { return false; }
+
 	MainGridWithUiSettings loadMainGrid(PlayerSetting[] playerSettings) throws MapLoadException;
 
 	MainGridWithUiSettings loadMainGrid(PlayerSetting[] playerSettings, EMapStartResources startResources) throws MapLoadException;

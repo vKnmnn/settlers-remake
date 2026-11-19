@@ -121,7 +121,6 @@ class OriginalMapFileContentReader {
 	private boolean singlePlayerMap = false;
 
 	private byte[] mapContent;
-	@SuppressWarnings("unused")
 	private EMapStartResources startResources = EMapStartResources.HIGH_GOODS;
 
 	private String mapQuestTip = null;
@@ -347,6 +346,10 @@ class OriginalMapFileContentReader {
 		for (MapResourceInfo element : resources.values()) {
 			element.resetDecryptedFlag();
 		}
+	}
+
+	EMapStartResources getStartResources() {
+		return startResources;
 	}
 
 	void readBasicMapInformation() throws MapLoadException {

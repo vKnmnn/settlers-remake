@@ -201,6 +201,7 @@ public class JSettlersGame {
 
 				MainGridWithUiSettings gridWithUiState = mapCreator.loadMainGrid(initialGameState.getPlayerSettings(), initialGameState.getStartResources());
 				mainGrid = gridWithUiState.getMainGrid();
+				if (mapCreator.supportsCustomMatchRules()) mainGrid.setMatchRules(initialGameState.getMatchRules());
 				PlayerState playerState = gridWithUiState.getPlayerState(initialGameState.getPlayerId());
 
 				RescheduleTimer.schedule(MatchConstants.clock()); // schedule timer

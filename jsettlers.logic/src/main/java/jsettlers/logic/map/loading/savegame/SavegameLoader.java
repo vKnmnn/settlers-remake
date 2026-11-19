@@ -37,6 +37,9 @@ import jsettlers.logic.timer.RescheduleTimer;
  */
 public class SavegameLoader extends RemakeMapLoader {
 
+	@Override
+	public boolean supportsCustomMatchRules() { return false; }
+
 	public SavegameLoader(IListedMap file, MapFileHeader header) {
 		super(file, header);
 	}

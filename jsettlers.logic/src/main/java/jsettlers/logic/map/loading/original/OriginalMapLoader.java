@@ -80,6 +80,14 @@ public class OriginalMapLoader extends MapLoader {
 	// -- Interface MapLoader --//
 	// -------------------------//
 	@Override
+	public boolean supportsCustomMatchRules() { return !mapContent.isSinglePlayerMap(); }
+
+	@Override
+	public EMapStartResources getDefaultStartResources() {
+		return mapContent.getStartResources();
+	}
+
+	@Override
 	public MapFileHeader getFileHeader() {
 		if (isMapOK) {
 			return new MapFileHeader(

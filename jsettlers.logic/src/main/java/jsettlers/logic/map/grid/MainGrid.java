@@ -137,6 +137,7 @@ import jsettlers.logic.movable.interfaces.ILogicMovable;
 import jsettlers.logic.objects.arrow.ArrowObject;
 import jsettlers.logic.objects.stack.StackMapObject;
 import jsettlers.logic.player.Player;
+import jsettlers.logic.player.MatchRules;
 import jsettlers.logic.player.PlayerSetting;
 
 /**
@@ -146,6 +147,17 @@ import jsettlers.logic.player.PlayerSetting;
  */
 public final class MainGrid implements Serializable {
 	private static final long serialVersionUID = 3824511313693431424L;
+
+	private MatchRules matchRules;
+
+	/** Legacy saves have no rules field and retain the military victory conditions. */
+	public MatchRules getMatchRules() {
+		return matchRules == null ? MatchRules.DEFAULT : matchRules;
+	}
+
+	public void setMatchRules(MatchRules rules) {
+		matchRules = java.util.Objects.requireNonNull(rules, "rules");
+	}
 
 	/** Serializes saving with game shutdown. */
 	public static final Object SAVE_LOCK = new Object();

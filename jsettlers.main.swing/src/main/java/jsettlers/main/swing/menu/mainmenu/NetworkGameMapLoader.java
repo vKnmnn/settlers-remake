@@ -43,6 +43,9 @@ public class NetworkGameMapLoader extends MapLoader {
 		this.gameName = joinableGame.getName();
 	}
 
+	@Override
+	public boolean supportsCustomMatchRules() { return mapLoader.supportsCustomMatchRules(); }
+
 	public IJoinableGame getJoinableGame() {
 		return joinableGame;
 	}

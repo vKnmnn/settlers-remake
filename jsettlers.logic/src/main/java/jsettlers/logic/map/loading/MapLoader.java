@@ -42,6 +42,9 @@ public abstract class MapLoader implements IGameCreator, Comparable<MapLoader>, 
 	public static final String MAP_EXTENSION_ORIGINAL = ".map";
 	public static final String MAP_EXTENSION_ORIGINAL_MAP_EDITOR = ".edm";
 
+	@Override
+	public boolean supportsCustomMatchRules() { return true; }
+
 	public abstract MapFileHeader getFileHeader();
 
 	public static MapLoader getLoaderForListedMap(IListedMap listedMap) throws MapLoadException {
@@ -92,6 +95,11 @@ public abstract class MapLoader implements IGameCreator, Comparable<MapLoader>, 
 		}
 	}
 
+	/** Start stock authored by the map; remake maps without a preset retain the historical high stock. */
+	public EMapStartResources getDefaultStartResources() {
+		return EMapStartResources.HIGH_GOODS;
+	}
+
 	protected PlayerSetting[] setupStartConditions(PlayerSetting[] playerSettings, EMapStartResources startResources, IMutableMapData mapData) {
 		byte numberOfPlayers = (byte) getMaxPlayers();
 		if (playerSettings == null || CommonConstants.ACTIVATE_ALL_PLAYERS) {
@@ -101,7 +109,8 @@ public abstract class MapLoader implements IGameCreator, Comparable<MapLoader>, 
 			}
 		}
 
-		startResources.addStartTowerMaterialsAndSettlers(playerSettings, mapData);
+		EMapStartResources resolved = startResources == EMapStartResources.MAP_DEFAULT ? getDefaultStartResources() : startResources;
+		resolved.addStartTowerMaterialsAndSettlers(playerSettings, mapData);
 		return playerSettings;
 	}
 

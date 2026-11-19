@@ -18,6 +18,7 @@ import jsettlers.common.player.EWinState;
 import jsettlers.logic.map.grid.MainGrid;
 import jsettlers.logic.map.loading.WinLoseHandler;
 import jsettlers.logic.player.Player;
+import jsettlers.logic.player.MatchRules;
 
 import static java.util.Arrays.stream;
 
@@ -32,6 +33,7 @@ public class OriginalMultiPlayerWinLoseHandler extends WinLoseHandler {
 	public void updateWinLose() {
 		// Update defeated status
 		defeatDeadPlayers();
+		if (mainGrid.getMatchRules().getMode() == MatchRules.Mode.FREEPLAY) return;
 
 		// end game if only one team/nobody is left
 		Byte[] teamsWithAlivePlayer = playerStream()
