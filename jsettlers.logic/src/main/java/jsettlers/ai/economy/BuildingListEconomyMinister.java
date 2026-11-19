@@ -304,21 +304,14 @@ public class BuildingListEconomyMinister implements EconomyMinister {
 			mannaProducerCount = Math.min(mannaProducerCount, aiStatistics.getNumberOfBuildingTypeForPlayer(FARM, playerId));
 		}
 
-		int beekeepingCount = 0;
-		float beekeepingPerMeadBrewery = mapBuildingCounts[BEEKEEPING.ordinal] / (float) mannaProducerCount;
-		for (int i = 0; i < mannaProducerCount; i++) {
-			if(mannaProducer == MEAD_BREWERY) {
-				while(beekeepingPerMeadBrewery*i > beekeepingCount) {
-					addIfPossible(BEEKEEPING);
-					addIfPossible(BEEKEEPING);
-					addIfPossible(BEEKEEPING);
-					beekeepingCount++;
-				}
-				addIfPossible(WATERWORKS);
+		if (mannaProducer == MEAD_BREWERY) {
+			MeadProductionPlan.create(mapBuildingCounts[BEEKEEPING.ordinal], mannaProducerCount)
+					.forEach(this::addIfPossible);
+		} else {
+			for (int i = 0; i < mannaProducerCount; i++) {
+				addIfPossible(mannaProducer);
+				addIfPossible(TEMPLE);
 			}
-
-			addIfPossible(mannaProducer);
-			addIfPossible(TEMPLE);
 		}
 
 		if (mapBuildingCounts[BIG_TEMPLE.ordinal] > 0) {

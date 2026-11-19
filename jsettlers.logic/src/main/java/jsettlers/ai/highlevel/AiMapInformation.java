@@ -105,7 +105,7 @@ public class AiMapInformation {
 		return calculateBuildingCounts(maxSmiths, maxFishermen, maxGoldMelts, maxGemsMines, 3, 1, maxRiceFarms, playersAndNeverlandGrass, playersAndNeverlandStone, player.getCivilisation());
 	}
 
-	private int[] calculateBuildingCounts(int numberOfWeaponSmiths, int maxFishermen, int maxGoldMelts, int maxGemsMines, int maxMannaProducers, int maxBigTemples, int maxRiceFarms, long grassTiles, long stoneCount, ECivilisation civilisation) {
+	static int[] calculateBuildingCounts(int numberOfWeaponSmiths, int maxFishermen, int maxGoldMelts, int maxGemsMines, int maxMannaProducers, int maxBigTemples, int maxRiceFarms, long grassTiles, long stoneCount, ECivilisation civilisation) {
 		int[] buildingCounts = new int[EBuildingType.NUMBER_OF_BUILDINGS];
 		for (int i = 0; i < buildingCounts.length; i++) {
 			buildingCounts[i] = 0;
@@ -173,7 +173,7 @@ public class AiMapInformation {
 		} else if (numberOfWeaponSmiths > MIN_SMITHS_BEFORE_MANNA_AND_GOLD_REDUCTION) {
 			return calculateBuildingCounts(numberOfWeaponSmiths - 1, maxFishermen, maxGoldMelts, maxGemsMines, maxMannaProducers, maxBigTemples, maxRiceFarms, grassTiles, stoneCount, civilisation);
 		} else if (maxMannaProducers > MIN_MANNA_PRODUCERS_BEFORE_GOLD_REDUCTION) {
-			return calculateBuildingCounts(numberOfWeaponSmiths, maxFishermen, maxGoldMelts, maxMannaProducers - 1, maxGemsMines, maxBigTemples, maxRiceFarms, grassTiles, stoneCount, civilisation);
+			return calculateBuildingCounts(numberOfWeaponSmiths, maxFishermen, maxGoldMelts, maxGemsMines, maxMannaProducers - 1, maxBigTemples, maxRiceFarms, grassTiles, stoneCount, civilisation);
 		} else if (maxGoldMelts > 1) {
 			return calculateBuildingCounts(numberOfWeaponSmiths, maxFishermen, maxGoldMelts - 1, maxGemsMines, maxMannaProducers, maxBigTemples, maxRiceFarms, grassTiles, stoneCount, civilisation);
 		} else if (maxMannaProducers > 1) {
@@ -193,7 +193,7 @@ public class AiMapInformation {
 		}
 	}
 
-	private boolean isEnoughSpace(int[] buildingCounts, long grassTiles, ECivilisation playerCivilisation) {
+	private static boolean isEnoughSpace(int[] buildingCounts, long grassTiles, ECivilisation playerCivilisation) {
 		long grassTilesWithoutBuffer = Math.round(grassTiles / 3F);
 		for (int i = 0; i < buildingCounts.length; i++) {
 			BuildingVariant building = EBuildingType.VALUES[i].getVariant(playerCivilisation);
