@@ -271,7 +271,9 @@ public abstract class Movable implements ILogicMovable, FoWTask {
 					EDirection realDirection = direction.apply(mov);
 
 					ShortPoint2D targetPosition = realDirection.getNextHexPoint(mov.position);
-					if(mov.grid.canOccupy(mov, targetPosition)) {
+					// Fleeing civilians must be able to cross neutral or hostile ground.
+					if (mov.getMovableType().isSiegeWeapon() ? mov.grid.canOccupy(mov, targetPosition)
+							: mov.grid.isFreePosition(targetPosition.x, targetPosition.y)) {
 						mov.setDirection(realDirection);
 						return true;
 					} else {
@@ -629,7 +631,7 @@ public abstract class Movable implements ILogicMovable, FoWTask {
 
 			ShortPoint2D neighbor = dir.getNextHexPoint(position);
 
-			if(grid.canOccupy(this, neighbor)) {
+			if (movableType.isSiegeWeapon() ? grid.canOccupy(this, neighbor) : grid.isFreePosition(neighbor.x, neighbor.y)) {
 				setDirection(dir);
 				return true;
 			}

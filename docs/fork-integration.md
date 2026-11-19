@@ -445,3 +445,13 @@ The optional `:jsettlers.logic:fourCivilisationsIT` runs four complete AI matche
 with a real file save/load and ordinary victory/defeat. It is separate from short
 unit tests; scope and measured outcomes are in
 [playthrough-validation.md](playthrough-validation.md).
+
+### Civilian escape regression
+
+The siege occupancy change accidentally applied civilian territory restrictions
+to emergency steps across neutral or hostile ground. A stranded forester could
+consume all 120 escape attempts in one tick and die. Ordinary units again use
+the existing free-cell check for escape steps and random evasive directions;
+siege units retain their full footprint checks. Normal pathfinding continues to
+enforce territory restrictions. Regression coverage exercises the failing
+neutral-ground escape and three complete forester planting/return cycles.
