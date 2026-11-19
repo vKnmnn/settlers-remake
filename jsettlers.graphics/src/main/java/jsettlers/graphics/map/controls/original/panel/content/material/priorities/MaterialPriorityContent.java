@@ -51,7 +51,7 @@ public class MaterialPriorityContent extends AbstractContentProvider {
 	 */
 	public static class MaterialPriorityPanel extends UIPanel {
 		private static final int COLUMNS = 6;
-		private static final int ROWS = 5;
+		private static final int ROWS = (EMaterialType.NUMBER_OF_DROPPABLE_MATERIALS + COLUMNS - 1) / COLUMNS;
 		private static final float BUTTON_HEIGHT_RELATIVE_TO_ROW = 18f / (269 - 236);
 		private static final float BUTTON_WIDTH = 1f / COLUMNS;
 		private static final float BUTTON_HEIGHT = 1f / ROWS * BUTTON_HEIGHT_RELATIVE_TO_ROW;

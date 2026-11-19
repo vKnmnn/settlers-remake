@@ -7,6 +7,7 @@ import java.util.Set;
 import jsettlers.common.ai.EPlayerType;
 import jsettlers.common.map.shapes.MapCircle;
 import jsettlers.common.movable.EMovableType;
+import jsettlers.common.movable.EEffectType;
 import jsettlers.common.movable.ESpellType;
 import jsettlers.common.player.ECivilisation;
 import jsettlers.common.position.ShortPoint2D;
@@ -108,6 +109,22 @@ public class MageTeleportTest {
         assertNull(at(enemySource));
         assertFalse(grid.movablePathfinderGrid.isBlockedOrProtected(landing.x, landing.y));
         assertTrue(enemy.isAlive());
+    }
+
+    @Test
+    public void divineShieldProtectsOwnAndAlliedSoldiersButNeverEnemies() {
+        MageMovable priest = createGame(ECivilisation.ASIAN);
+        Movable own = spawn(EMovableType.SWORDSMAN_L1, 0, new ShortPoint2D(14, 12));
+        Movable ally = spawn(EMovableType.BOWMAN_L1, 1, new ShortPoint2D(14, 13));
+        Movable enemy = spawn(EMovableType.PIKEMAN_L1, 2, new ShortPoint2D(13, 13));
+
+        priest.moveToCast(own.getPosition(), ESpellType.SHIELD);
+        priest.timerEvent();
+
+        assertTrue(own.hasEffect(EEffectType.SHIELDED));
+        assertTrue(ally.hasEffect(EEffectType.SHIELDED));
+        assertFalse(enemy.hasEffect(EEffectType.SHIELDED));
+        assertTrue(priest.isAlive());
     }
 
     private MageMovable createGame(ECivilisation civilisation) {
