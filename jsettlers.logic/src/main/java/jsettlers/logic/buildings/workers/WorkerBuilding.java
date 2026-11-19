@@ -101,7 +101,7 @@ public class WorkerBuilding extends WorkAreaBuilding implements IWorkerRequestBu
 			this.worker = null;
 			setOccupied(false);
 			super.showFlag(false);
-			super.releaseRequestStacks();
+			releaseRequestStacks();
 			requestWorker();
 		} else {
 			System.err.println("ERROR: A worker not registered at the building wanted to leave it!");

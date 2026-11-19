@@ -383,3 +383,48 @@ cover the offset order, stack merging/overflow, building stores, occupied cells,
 stack spacing, blocked neighborhoods, map corners and transport offers at the
 actual destinations. The lightweight movable test-map does not model gift stacks;
 its gift operation is a no-op, like its other unsupported priest terrain actions.
+
+
+### Siege workshops, campaigns and economy follow-up
+
+The siege implementation adapts BotGGias's powder-maker contribution
+`2ee994a75ac9c668ed1bce16a62d1160504517f5` and siege contribution
+`b175d5ca4112e11e111dc7ad2638b75192aa18da`. They are integrated as a reviewed
+port because this fork has different movement, statistics and savegame code.
+The upstream binary replay fixtures are not replaced.
+
+All four civilizations now have their own workshop and controllable siege
+weapon; Asians also have a powder maker using coal and sulfur. Workshops accept
+queued weapon orders and manufacture ammunition. Weapons reload from nearby
+ammunition stacks. Selecting a single weapon shows its live ammunition count;
+mixed infantry/siege selections keep their rows above the action buttons.
+Selection panels, build menus, map-editor types and original
+map import are wired up. Original map type 41 resolves to the authored player's
+civilization-specific weapon; type 42 footprint helpers are not separate settlers.
+
+Original combat evidence and remaining differences are documented in
+[siege-gameplay.md](siege-gameplay.md). Native graphics mappings, building costs and intentional visual/layout
+adaptations are documented in [siege-assets.md](siege-assets.md). Old saves'
+material settings and request queues are migrated by building identity, retaining
+existing priorities and deliveries; see [savegame-enum-migration.md](savegame-enum-migration.md).
+
+Desktop campaign selection, missing-file handling, sequential mission progress
+and save associations are described in [campaigns.md](campaigns.md). This is an
+experimental framework: original mission scripts, alliances and original AI are
+not reproduced, and the local installation lacks campaign maps.
+
+The economy fixes preserve the configured Amazon honey/mead ratio while planning
+small brewery groups correctly, and keep gem and mana budgets in the right order
+when the AI recursively reduces its building plan. See [balance.md](balance.md).
+
+
+Validation for this integration: 166 logic cases (three inapplicable powder-house
+parameter combinations skipped), 28 graphics cases, 977 common cases (162 existing
+skips), 16 desktop cases, and the save/load/save replay check passed under JDK 21.
+Actual worker cycles produce each of the four weapons and load the three
+ammunition types; the Asian powder worker also completes two production cycles.
+These tests start from finished buildings with supplied inputs, not a complete
+mining-to-construction economy. A blocked weapon exit preserves its finished
+order until an unprotected spawn cell becomes available. The worker-replacement
+regression preserves the order and renews ammunition supply requests.
+No interactive multiplayer session or Android build was performed.

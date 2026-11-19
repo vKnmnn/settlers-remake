@@ -383,5 +383,6 @@ public enum EActionType {
 	MUSIC_VOLUME_DOWN,
 
 	/** Recall a local movable selection group. No simulation command is generated. */
-	SELECT_GROUP;
+	SELECT_GROUP,
+	ORDER_SIEGE_WEAPON;
 }

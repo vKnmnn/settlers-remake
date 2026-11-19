@@ -23,6 +23,7 @@ import jsettlers.common.mapobject.EMapObjectType;
 import jsettlers.common.material.EMaterialType;
 import jsettlers.common.material.ESearchType;
 import jsettlers.common.movable.EDirection;
+import jsettlers.common.movable.ESiegeWeaponType;
 import jsettlers.common.player.IPlayer;
 import jsettlers.common.position.ShortPoint2D;
 import jsettlers.logic.map.grid.partition.manager.manageables.IManageableBearer;
@@ -238,6 +239,15 @@ public abstract class AbstractStrategyGrid implements Serializable {
 *            Attacked position.
 	 */
 	public abstract void addArrowObject(ShortPoint2D shooterPos, IPlayer shooterPlayer, float hitStrength, ShortPoint2D attackedPos);
+
+	/** Finds an enemy structure, siege weapon or ship eligible for this weapon. */
+	public abstract IAttackable getSiegeTarget(ShortPoint2D position, IPlayer player, ESiegeWeaponType weapon, short min, short max);
+
+	/** Adds a projectile whose impact affects a single eligible target. */
+	public abstract void addSiegeProjectile(ShortPoint2D shooterPos, IPlayer shooterPlayer, ESiegeWeaponType weaponType, float hitStrength,
+			ShortPoint2D attackedPos);
+
+	public abstract void applySiegeDamage(ShortPoint2D center, ESiegeWeaponType weapon, float strength, IPlayer player, ShortPoint2D source);
 
 	public abstract boolean hasNoMovableAt(int x, int y);
 

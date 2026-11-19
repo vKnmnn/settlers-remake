@@ -204,7 +204,18 @@ public class OriginalMapFileContent implements IMutableMapData {
 		if (mapSettlerType == EOriginalMapSettlersType.NOT_A_SETTLER)
 			return;
 		if (mapSettlerType.value != null) {
-			setMapObject(pos, new MovableObject(mapSettlerType.value, (byte) party));
+			EMovableType type = mapSettlerType.value;
+			// Original type 41 is shared by all four nations' siege weapons.
+			if (mapSettlerType == EOriginalMapSettlersType.Katapult && mapPlayerInfos != null
+					&& party >= 0 && party < mapPlayerInfos.length) {
+				switch (mapPlayerInfos[party].nation) {
+				case EGYPTIANS: type = EMovableType.BALLISTA; break;
+				case ASIANS: type = EMovableType.CANNON; break;
+				case AMAZONS: type = EMovableType.GONG; break;
+				default: break;
+				}
+			}
+			setMapObject(pos, new MovableObject(type, (byte) party));
 		}
 	}
 

@@ -15,6 +15,8 @@
 package jsettlers.logic.map.grid.partition.manager.settings;
 
 import java.io.Serializable;
+import java.io.IOException;
+import java.io.ObjectInputStream;
 
 import jsettlers.common.buildings.EBuildingType;
 import jsettlers.common.buildings.MaterialsOfBuildings;
@@ -50,6 +52,18 @@ public final class MaterialDistributionSettings implements IMaterialDistribution
 		requestValueSum = requestingBuildings.length;
 		float initialValue = 1.0f;
 		Arrays.stream(requestingBuildings).forEach(buildingType -> distributionSettings.setUserValue(buildingType, initialValue));
+	}
+
+	private void readObject(ObjectInputStream input) throws IOException, ClassNotFoundException {
+		input.defaultReadObject();
+		int oldSize = distributionSettings.ensureSize(EBuildingType.NUMBER_OF_BUILDINGS);
+		for (EBuildingType type : getBuildingTypes()) {
+			if (type.ordinal >= oldSize) {
+				// New consumers get the same default as in a new game; existing zeroes stay disabled.
+				distributionSettings.setUserValue(type, 1f);
+				requestValueSum += 1f;
+			}
+		}
 	}
 
 	public final EBuildingType[] getBuildingTypes() {

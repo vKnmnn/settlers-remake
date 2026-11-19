@@ -14,6 +14,9 @@
  *******************************************************************************/
 package jsettlers.logic.map.grid;
 
+import jsettlers.logic.movable.interfaces.ISiegeAttackable;
+import jsettlers.logic.movable.military.BuildingSiegeTarget;
+import jsettlers.logic.objects.siege.SiegeProjectileObject;
 import java.io.IOException;
 import java.io.ObjectInputStream;
 import java.io.ObjectOutputStream;
@@ -70,6 +73,7 @@ import jsettlers.common.movable.EDirection;
 import jsettlers.common.movable.EEffectType;
 import jsettlers.common.movable.EMovableType;
 import jsettlers.common.movable.IGraphicsMovable;
+import jsettlers.common.movable.ESiegeWeaponType;
 import jsettlers.common.movable.IGraphicsThief;
 import jsettlers.common.player.EWinState;
 import jsettlers.common.player.IPlayer;
@@ -356,13 +360,18 @@ public final class MainGrid implements Serializable {
 			}
 		} else if (object instanceof MovableObject) {
 			MovableObject movableObject = (MovableObject) object;
-			Movable.createMovable(movableObject.getType(), partitionsGrid.getPlayer(movableObject.getPlayerId()), pos, movablePathfinderGrid);
+			Player player = partitionsGrid.getPlayer(movableObject.getPlayerId());
+			EMovableType movableType = movableObject.getType();
+			if (movableType.isSiegeWeapon() && player != null) { // original maps don't know the civilisation of the siege weapons
+				movableType = ESiegeWeaponType.forCivilisation(player.getCivilisation()).movableType;
+			}
+			Movable.createMovable(movableType, player, pos, movablePathfinderGrid);
 		}
 	}
 
 	private void placeStack(ShortPoint2D pos, EMaterialType materialType, int count) {
 		for (int i = 0; i < count; i++) {
-			movablePathfinderGrid.dropMaterial(pos, materialType, true, false);
+			movablePathfinderGrid.dropMaterial(pos, materialType, materialType.isDroppable(), false);
 		}
 	}
 
@@ -977,6 +986,21 @@ public final class MainGrid implements Serializable {
 		}
 	}
 
+	/** Siege impacts affect one eligible target, never nearby settlers or infantry. */
+	private void applySiegeDamage(ShortPoint2D center, ESiegeWeaponType weapon, float strength, IPlayer attacker, ShortPoint2D source) {
+		if (strength <= 0 || !isInBounds(center.x, center.y)) return;
+		Building building = objectsGrid.getBuildingAt(center.x, center.y);
+		if (building != null && weapon.canAttackBuilding(building.getBuildingVariant().getType())) {
+			building.receiveSiegeHit(strength, source, attacker);
+			return;
+		}
+		ILogicMovable movable = movableGrid.getMovableAt(center.x, center.y);
+		if (weapon != ESiegeWeaponType.GONG && movable instanceof IAttackableMovable && (movable.getMovableType().isSiegeWeapon() || movable.getMovableType().isShip())
+				&& MovableGrid.isEnemy(attacker, (IAttackableMovable) movable)) {
+			((IAttackableMovable) movable).receiveHit(strength, source, attacker);
+		}
+	}
+
 	final class MapObjectsManagerGrid implements IMapObjectsManagerGrid {
 		@Override
 		public boolean hasMovableAt(int x, int y) {
@@ -1048,6 +1072,12 @@ public final class MainGrid implements Serializable {
 		@Override
 		public byte getResourceAmountAt(int x, int y) {
 			return landscapeGrid.getResourceAmountAt(x, y);
+		}
+
+		@Override
+		public void hitWithSiegeProjectile(SiegeProjectileObject projectile) {
+			applySiegeDamage(projectile.getTargetPos(), projectile.getWeaponType(), projectile.getHitStrength(), projectile.getShooterPlayer(),
+					projectile.getSourcePos());
 		}
 
 		@Override
@@ -1654,6 +1684,44 @@ public final class MainGrid implements Serializable {
 		@Override
 		public void addArrowObject(ShortPoint2D shooterPos, IPlayer shooterPlayer, float hitStrength, ShortPoint2D attackedPos) {
 			mapObjectsManager.addArrowObject(attackedPos, shooterPos, shooterPlayer, hitStrength);
+		}
+
+		@Override
+		public IAttackable getSiegeTarget(ShortPoint2D position, IPlayer player, ESiegeWeaponType weapon, short min, short max) {
+			IAttackable result = null;
+			int nearest = Integer.MAX_VALUE;
+			for (ShortPoint2D point : new HexGridArea(position.x, position.y, min, max)) {
+				if (!isInBounds(point.x, point.y)) continue;
+				IAttackable candidate = null;
+				Building building = objectsGrid.getBuildingAt(point.x, point.y);
+				if (building != null && !building.isDestroyed() && building.isConstructionFinished()
+						&& weapon.canAttackBuilding(building.getBuildingVariant().getType())) {
+					candidate = new BuildingSiegeTarget(building);
+				} else {
+					ILogicMovable movable = movableGrid.getMovableAt(point.x, point.y);
+					if (weapon != ESiegeWeaponType.GONG && movable instanceof IAttackableMovable && (movable.getMovableType().isSiegeWeapon() || movable.getMovableType().isShip())) {
+						candidate = (IAttackableMovable) movable;
+					}
+				}
+				if (candidate == null || !candidate.isAlive() || !MovableGrid.isEnemy(player, candidate)) continue;
+				int distance = position.getOnGridDistTo(candidate.getPosition());
+				if (distance >= min && distance <= max && distance < nearest) {
+					result = candidate;
+					nearest = distance;
+				}
+			}
+			return result;
+		}
+
+		@Override
+		public void addSiegeProjectile(ShortPoint2D shooterPos, IPlayer shooterPlayer, ESiegeWeaponType weaponType, float hitStrength,
+				ShortPoint2D attackedPos) {
+			mapObjectsManager.addSiegeProjectile(attackedPos, shooterPos, shooterPlayer, weaponType, hitStrength);
+		}
+
+		@Override
+		public void applySiegeDamage(ShortPoint2D center, ESiegeWeaponType weapon, float strength, IPlayer player, ShortPoint2D source) {
+			MainGrid.this.applySiegeDamage(center, weapon, strength, player, source);
 		}
 
 		@Override

@@ -35,6 +35,7 @@ import jsettlers.common.mapobject.IMapObject;
 import jsettlers.common.material.EMaterialType;
 import jsettlers.common.material.ESearchType;
 import jsettlers.common.movable.EDirection;
+import jsettlers.common.movable.ESiegeWeaponType;
 import jsettlers.common.movable.IGraphicsMovable;
 import jsettlers.common.player.IPlayer;
 import jsettlers.common.position.ShortPoint2D;
@@ -456,6 +457,20 @@ public class MovableTestsMap implements IGraphicsGrid, IAStarPathMap {
 
 		@Override
 		public void addArrowObject(ShortPoint2D shooterPos, IPlayer shooterPlayer, float hitStrength, ShortPoint2D attackedPos) {
+		}
+
+		@Override
+		public IAttackable getSiegeTarget(ShortPoint2D position, IPlayer searchingPlayer, ESiegeWeaponType weapon, short minSearchRadius, short maxSearchRadius) {
+			return null;
+		}
+
+		@Override
+		public void addSiegeProjectile(ShortPoint2D shooterPos, IPlayer shooterPlayer, ESiegeWeaponType weaponType, float hitStrength,
+				ShortPoint2D attackedPos) {
+		}
+
+		@Override
+		public void applySiegeDamage(ShortPoint2D center, ESiegeWeaponType weapon, float hitStrength, IPlayer attackingPlayer, ShortPoint2D attackerPos) {
 		}
 
 		@Override

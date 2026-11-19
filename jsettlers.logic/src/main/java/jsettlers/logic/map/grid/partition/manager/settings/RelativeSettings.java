@@ -15,6 +15,7 @@
 package jsettlers.logic.map.grid.partition.manager.settings;
 
 import java.io.Serializable;
+import java.util.Arrays;
 
 import jsettlers.logic.constants.MatchConstants;
 
@@ -25,7 +26,7 @@ public class RelativeSettings<T extends Enum<T>> implements Serializable {
 		T map(int ordinal);
 	}
 
-	private final float[] userValues;
+	private float[] userValues;
 	private final OrdinalToTypeMapper<T> ordinalToTypeMapper;
 	private final boolean decreaseOnDraw;
 	private final float lowerBound;
@@ -43,6 +44,13 @@ public class RelativeSettings<T extends Enum<T>> implements Serializable {
 
 	public RelativeSettings(int numberOfElements, OrdinalToTypeMapper<T> ordinalToTypeMapper, boolean decreaseOnDraw) {
 		this(numberOfElements, ordinalToTypeMapper, decreaseOnDraw, 0, Float.MAX_VALUE);
+	}
+
+	/** Extend an old save's ordinal table without changing its configured values or sum. */
+	int ensureSize(int minimumSize) {
+		int oldSize = userValues.length;
+		if (oldSize < minimumSize) userValues = Arrays.copyOf(userValues, minimumSize);
+		return oldSize;
 	}
 
 	public void setUserValue(T type, float value) {

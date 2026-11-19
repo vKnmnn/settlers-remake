@@ -14,6 +14,7 @@
  *******************************************************************************/
 package jsettlers.logic.map.grid.objects;
 
+import jsettlers.common.movable.ESiegeWeaponType;
 import java.io.IOException;
 import java.io.ObjectInputStream;
 import java.io.Serializable;
@@ -45,6 +46,7 @@ import jsettlers.logic.objects.SoundableSelfDeletingObject;
 import jsettlers.logic.objects.StandardMapObject;
 import jsettlers.logic.objects.MannaBowlMapObject;
 import jsettlers.logic.objects.arrow.ArrowObject;
+import jsettlers.logic.objects.siege.SiegeProjectileObject;
 import jsettlers.logic.objects.building.BuildingWorkAreaMarkObject;
 import jsettlers.logic.objects.building.ConstructionMarkObject;
 import jsettlers.logic.objects.building.InformableMapObject;
@@ -68,6 +70,7 @@ import java.util.Optional;
  */
 public final class MapObjectsManager implements IScheduledTimerable, Serializable {
 	private static final long serialVersionUID = 1833055351956872224L;
+	private static final float SIEGE_PROJECTILE_REMOVE_DELAY = 0.1f;
 
 	private final IMapObjectsManagerGrid grid;
 	private final PriorityQueue<TimeEvent> timingQueue = new PriorityQueue<>();
@@ -370,6 +373,17 @@ public final class MapObjectsManager implements IScheduledTimerable, Serializabl
 		addMapObject(attackedPos, arrow);
 		schedule(arrow, arrow.getEndTime(), false);
 		schedule(arrow, arrow.getEndTime() + ArrowObject.MIN_DECOMPOSE_DELAY * (1 + MatchConstants.random().nextFloat()), true);
+	}
+
+	/**
+	 * Adds a projectile of a siege weapon flying from the shooter to the attacked position.
+	 */
+	public void addSiegeProjectile(ShortPoint2D attackedPos, ShortPoint2D shooterPos, IPlayer shooterPlayer, ESiegeWeaponType weaponType,
+			float hitStrength) {
+		SiegeProjectileObject projectile = new SiegeProjectileObject(grid, attackedPos, shooterPos, shooterPlayer, weaponType, hitStrength);
+		addMapObject(attackedPos, projectile);
+		schedule(projectile, projectile.getEndTime(), false);
+		schedule(projectile, projectile.getEndTime() + SIEGE_PROJECTILE_REMOVE_DELAY, true);
 	}
 
 	public void addSimpleMapObject(ShortPoint2D pos, EMapObjectType objectType, boolean blocking, Player player) {

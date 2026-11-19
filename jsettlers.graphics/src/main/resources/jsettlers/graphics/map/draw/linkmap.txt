@@ -175,6 +175,37 @@ SETTLER_GUI, SMITH {
 }
 
 
+# siege weapons: each weapon uses the icon of its civilisation for all civilisations
+# Verified active weapon icons in the original GFX files.
+SETTLER_GUI, CATAPULT {
+    ROMAN: original_14_GUI_234
+    EGYPTIAN: original_14_GUI_234
+    ASIAN: original_14_GUI_234
+    AMAZON: original_14_GUI_234
+}
+
+SETTLER_GUI, BALLISTA {
+    ROMAN: original_24_GUI_228
+    EGYPTIAN: original_24_GUI_228
+    ASIAN: original_24_GUI_228
+    AMAZON: original_24_GUI_228
+}
+
+SETTLER_GUI, CANNON {
+    ROMAN: original_34_GUI_243
+    EGYPTIAN: original_34_GUI_243
+    ASIAN: original_34_GUI_243
+    AMAZON: original_34_GUI_243
+}
+
+SETTLER_GUI, GONG {
+    ROMAN: original_44_GUI_237
+    EGYPTIAN: original_44_GUI_237
+    ASIAN: original_44_GUI_237
+    AMAZON: original_44_GUI_237
+}
+
+
 SHIP_GUI_INACTIVE, FERRY {
     ROMAN: original_14_GUI_270
     EGYPTIAN: original_24_GUI_270

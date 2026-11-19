@@ -15,6 +15,12 @@
 package jsettlers.graphics.map.controls.original.panel.selection;
 
 import java.util.HashMap;
+import java.util.Arrays;
+import go.graphics.GLDrawContext;
+import go.graphics.text.EFontSize;
+import jsettlers.common.movable.IGraphicsSiegeWeapon;
+import jsettlers.common.movable.ESiegeWeaponType;
+import jsettlers.graphics.ui.Label;
 import java.util.Iterator;
 import java.util.Map;
 
@@ -39,6 +45,10 @@ public class SoldierSelectionContent extends AbstractSelectionContent {
 			EMovableType.BOWMAN_L1,
 			EMovableType.BOWMAN_L2,
 			EMovableType.BOWMAN_L3,
+			EMovableType.CATAPULT,
+			EMovableType.BALLISTA,
+			EMovableType.CANNON,
+			EMovableType.GONG,
 	};
 
 	/**
@@ -52,6 +62,23 @@ public class SoldierSelectionContent extends AbstractSelectionContent {
 		panel = new UIPanel();
 
 		addRowsToPanel(panel, selection, soldiertypes);
+		if (selection.getSize() == 1 && selection.get(0) instanceof IGraphicsSiegeWeapon) {
+			IGraphicsSiegeWeapon weapon = (IGraphicsSiegeWeapon) selection.get(0);
+			ESiegeWeaponType type = ESiegeWeaponType.fromMovableType(weapon.getMovableType());
+			if (type != null && type.usesAmmo()) {
+				panel.addChild(new Label("", EFontSize.NORMAL) {
+					private int previousAmmo = -1;
+					@Override public void drawAt(GLDrawContext gl) {
+						int ammo = weapon.getAmmo();
+						if (ammo != previousAmmo) {
+							setText(String.format(Labels.getString("siege_weapon_ammo"), ammo, type.maxAmmo));
+							previousAmmo = ammo;
+						}
+						super.drawAt(gl);
+					}
+				}, .1f, .65f, .9f, .75f);
+			}
+		}
 
 		UIPanel kill = new LabeledButton(Labels.getString("kill"), new Action(EActionType.DESTROY));
 		UIPanel stop = new LabeledButton(Labels.getString("stop"), new Action(EActionType.STOP_WORKING));
@@ -61,9 +88,10 @@ public class SoldierSelectionContent extends AbstractSelectionContent {
 	}
 
 	public static void addRowsToPanel(UIPanel panel, ISelectionSet selection, EMovableType[] types) {
-		float rowHeight = 1f / ROWS;
+		long visibleRows = Arrays.stream(types).filter(type -> selection.getMovableCount(type, new HashMap<>()) > 0).count();
+		float rowHeight = Math.min(1f / ROWS, .7f / Math.max(1, visibleRows));
 
-		int rowi = ROWS - 1; // from bottom
+		int rowi = 0; // top down, leaving the action buttons free
 		for (int i = 0; i < types.length; i++) {
 			EMovableType type = types[i];
 			Map<IPlayer, Integer> playerStatistic = new HashMap<>();
@@ -79,9 +107,9 @@ public class SoldierSelectionContent extends AbstractSelectionContent {
 
 			if (count > 0) {
 				SelectionRow row = new SelectionRow(bestEntry.getKey(), type, count);
-				panel.addChild(row, 0.1f, rowHeight * (rowi - 1), .9f,
-						rowHeight * (rowi));
-				rowi--;
+				panel.addChild(row, 0.1f, .95f - rowHeight * (rowi + 1), .9f,
+						.95f - rowHeight * rowi);
+				rowi++;
 			}
 		}
 

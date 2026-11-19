@@ -56,6 +56,7 @@ import jsettlers.logic.movable.interfaces.AbstractMovableGrid;
 import jsettlers.logic.movable.interfaces.IAttackable;
 import jsettlers.logic.movable.interfaces.IAttackableMovable;
 import jsettlers.logic.movable.interfaces.ILogicMovable;
+import jsettlers.logic.movable.interfaces.ISiegeAttackable;
 import jsettlers.logic.movable.interfaces.ISoldierMovable;
 import jsettlers.logic.objects.StandardMapObject;
 import jsettlers.logic.player.Player;
@@ -310,6 +311,7 @@ public class OccupyingBuilding extends Building implements IBuilding.IOccupied, 
 		}
 
 		// removeOne the soldier and dijkstraRequest a new one
+		addInformableMapObject(occupier, false); // if the soldier is a bowman, this removes the informable map object.
 		sortedOccupiers.remove(occupier);
 		if(sortedOccupiers.isEmpty() && !inFight) setOccupied(false);
 		emptyPlaces.add(occupier.place);
@@ -573,7 +575,12 @@ public class OccupyingBuilding extends Building implements IBuilding.IOccupied, 
 		return null;
 	}
 
-	private static class AttackableTowerMapObject extends StandardMapObject implements IAttackable, IAttackableTowerMapObject {
+	/** Empty towers remain vulnerable to structural damage. */
+	public boolean canReceiveSiegeDamage() {
+		return !isDestroyed() && isConstructionFinished();
+	}
+
+	private static class AttackableTowerMapObject extends StandardMapObject implements ISiegeAttackable, IAttackableTowerMapObject {
 		private static final long serialVersionUID = -2172130724577350091L;
 		private OccupyingBuilding occupyingBuilding;
 		private TowerOccupier currDefender;
@@ -624,6 +631,16 @@ public class OccupyingBuilding extends Building implements IBuilding.IOccupied, 
 			}
 
 			occupyingBuilding.getPlayer().showMessage(SimpleMessage.attacked(attackingPlayer.getPlayerId(), attackerPos));
+		}
+
+		@Override
+		public boolean canReceiveSiegeDamage() {
+			return occupyingBuilding.canReceiveSiegeDamage();
+		}
+
+		@Override
+		public void receiveSiegeHit(float strength, ShortPoint2D attackerPos, IPlayer attackingPlayer) {
+			occupyingBuilding.receiveSiegeHit(strength, attackerPos, attackingPlayer);
 		}
 
 		private void pullNewDefender(ShortPoint2D attackerPos) {

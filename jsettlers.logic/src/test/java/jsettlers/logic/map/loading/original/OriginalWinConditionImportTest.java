@@ -50,7 +50,7 @@ public class OriginalWinConditionImportTest {
     public void rejectsUnsupportedActiveBuildingGoal() throws Exception {
         byte[] conditions = buildingConditions();
         conditions[22] = 1;
-        conditions[23] = 31; // unsupported catapult workshop
+        conditions[23] = (byte) 255; // unknown building type
         read(conditions);
     }
 

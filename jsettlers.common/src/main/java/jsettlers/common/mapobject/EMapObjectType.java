@@ -179,6 +179,7 @@ public enum EMapObjectType {
 	HIVE_HARVESTABLE,
 
 	SWAMP_DECORATION,
+	SIEGE_PROJECTILE,
 	;
 
 	public static final EMapObjectType[] VALUES = EMapObjectType.values();
@@ -190,6 +191,7 @@ public enum EMapObjectType {
 
 	public static final Set<EMapObjectType> TO_BE_REMOVED_WHEN_FLATTENED = EnumSet.of(
 			EMapObjectType.ARROW,
+			EMapObjectType.SIEGE_PROJECTILE,
 			EMapObjectType.CORN_GROWING,
 			EMapObjectType.CORN_ADULT,
 			EMapObjectType.CORN_DEAD,

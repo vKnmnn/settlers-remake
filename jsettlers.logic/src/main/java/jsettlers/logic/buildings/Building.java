@@ -55,6 +55,7 @@ import jsettlers.logic.buildings.stack.RequestStack;
 import jsettlers.logic.buildings.trading.HarborBuilding;
 import jsettlers.logic.buildings.trading.MarketBuilding;
 import jsettlers.logic.buildings.workers.DockyardBuilding;
+import jsettlers.logic.buildings.workers.SiegeWorkshopBuilding;
 import jsettlers.logic.buildings.workers.MillBuilding;
 import jsettlers.logic.buildings.workers.MineBuilding;
 import jsettlers.logic.buildings.workers.ResourceBuilding;
@@ -73,6 +74,21 @@ import jsettlers.logic.timer.RescheduleTimer;
 public abstract class Building extends AbstractHexMapObject implements IConstructableBuilding, IPlayerable, IBuilding, IScheduledTimerable,
 		IDebugable, IDiggerRequester {
 	private static final long serialVersionUID = 4379555028512391595L;
+	// Accumulated structural damage defaults to zero in older saves.
+	private float siegeDamage;
+
+	public final float getSiegeHealth() {
+		int maximum = type == EBuildingType.TOWER ? 250 : type == EBuildingType.BIG_TOWER ? 500 : type == EBuildingType.CASTLE ? 1000 : 100;
+		return Math.max(0, maximum - siegeDamage);
+	}
+
+	public void receiveSiegeHit(float strength, ShortPoint2D attackerPos, jsettlers.common.player.IPlayer attacker) {
+		if (strength <= 0 || isDestroyed() || !isConstructionFinished() || attacker.getTeamId() == player.getTeamId()) return;
+		siegeDamage += strength;
+		player.showMessage(jsettlers.common.menu.messages.SimpleMessage.attacked(attacker.getPlayerId(), attackerPos));
+		if (getSiegeHealth() <= 0) kill();
+	}
+
 
 	private static final float BUILDING_DESTRUCTION_SMOKE_DURATION = 1.2f;
 	private static final short UNOCCUPIED_VIEW_DISTANCE = 5;
@@ -746,7 +762,14 @@ public abstract class Building extends AbstractHexMapObject implements IConstruc
 		case DISTILLERY:
 		case LABORATORY:
 		case MEAD_BREWERY:
+		case POWDER_MAKER:
 			return new WorkerBuilding(type, player, position, buildingsGrid);
+
+		case CATAPULT_WORKSHOP:
+		case BALLISTA_WORKSHOP:
+		case CANNON_WORKSHOP:
+		case GONG_WORKSHOP:
+			return new SiegeWorkshopBuilding(type, player, position, buildingsGrid);
 
 		case DOCKYARD:
 			return new DockyardBuilding(player, position, buildingsGrid);

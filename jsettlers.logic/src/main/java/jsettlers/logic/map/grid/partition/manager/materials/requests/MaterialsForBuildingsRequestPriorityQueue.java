@@ -37,12 +37,12 @@ public final class MaterialsForBuildingsRequestPriorityQueue extends AbstractMat
 	private static final EBuildingType[] ADDITIONAL_BUILDING_TYPES = { EBuildingType.STOCK, EBuildingType.HARBOR, EBuildingType.MARKET_PLACE };
 	private static final int NUMBER_OF_ADDITIONAL_BUILDING_TYPES = ADDITIONAL_BUILDING_TYPES.length;
 
-	private final DoubleLinkedList<MaterialRequestObject> queues[][];
+	private DoubleLinkedList<MaterialRequestObject> queues[][];
 
 	private final MaterialDistributionSettings settings;
-	private final EBuildingType[] buildingTypes;
-	private final int numberOfAllBuildings;
-	private final int numberOfConfigurableBuildings;
+	private EBuildingType[] buildingTypes;
+	private int numberOfAllBuildings;
+	private int numberOfConfigurableBuildings;
 
 	private transient int[] buildingTypesToIndex;
 
@@ -78,7 +78,29 @@ public final class MaterialsForBuildingsRequestPriorityQueue extends AbstractMat
 
 	private void readObject(ObjectInputStream ois) throws IOException, ClassNotFoundException {
 		ois.defaultReadObject();
+		upgradeBuildingQueues();
 		calculateBuildingTypesToIndex();
+	}
+
+	/** Reindex serialized queues by building identity, including the trailing stock/trade queues. */
+	@SuppressWarnings("unchecked")
+	private void upgradeBuildingQueues() throws IOException {
+		EBuildingType[] currentTypes = settings.getBuildingTypes();
+		if (Arrays.equals(buildingTypes, currentTypes)) return;
+		DoubleLinkedList<MaterialRequestObject>[][] upgraded = new DoubleLinkedList[queues.length][];
+		for (int priority = 0; priority < queues.length; priority++) {
+			upgraded[priority] = DoubleLinkedList.getArray(currentTypes.length + NUMBER_OF_ADDITIONAL_BUILDING_TYPES);
+			for (int oldIndex = 0; oldIndex < buildingTypes.length; oldIndex++) {
+				int newIndex = Arrays.asList(currentTypes).indexOf(buildingTypes[oldIndex]);
+				if (newIndex < 0) throw new IOException("Saved material consumer is no longer supported: " + buildingTypes[oldIndex]);
+				upgraded[priority][newIndex] = queues[priority][oldIndex];
+			}
+			System.arraycopy(queues[priority], buildingTypes.length, upgraded[priority], currentTypes.length, NUMBER_OF_ADDITIONAL_BUILDING_TYPES);
+		}
+		buildingTypes = currentTypes;
+		queues = upgraded;
+		numberOfConfigurableBuildings = currentTypes.length;
+		numberOfAllBuildings = currentTypes.length + NUMBER_OF_ADDITIONAL_BUILDING_TYPES;
 	}
 
 	@Override
