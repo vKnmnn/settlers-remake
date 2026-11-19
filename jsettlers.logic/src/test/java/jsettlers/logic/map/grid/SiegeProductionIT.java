@@ -43,7 +43,6 @@ import jsettlers.logic.buildings.Building;
 import jsettlers.logic.buildings.workers.SiegeWorkshopBuilding;
 import jsettlers.logic.constants.Constants;
 import jsettlers.logic.constants.MatchConstants;
-import jsettlers.logic.map.loading.MapLoadException;
 import jsettlers.logic.map.loading.MapLoader;
 import jsettlers.logic.movable.Movable;
 import jsettlers.logic.movable.MovableManager;
@@ -52,6 +51,8 @@ import jsettlers.logic.player.Player;
 import jsettlers.logic.player.PlayerSetting;
 import jsettlers.main.JSettlersGame;
 import jsettlers.main.replay.ReplayUtils;
+import jsettlers.main.replay.PausedGameStartup;
+import jsettlers.logic.movable.civilian.BuildingWorkerMovable;
 import jsettlers.testutils.TestUtils;
 import jsettlers.testutils.map.MapUtils;
 
@@ -88,14 +89,14 @@ public class SiegeProductionIT {
 	private int time;
 
 	@Before
-	public void startGame() throws MapLoadException {
+	public void startGame() throws Exception {
 		MapLoader map = MapUtils.getMountainlake();
 		PlayerSetting[] playerSettings = AiTestUtils.getDefaultPlayerSettings(map.getMaxPlayers());
 		playerSettings[PLAYER] = new PlayerSetting(EPlayerType.HUMAN, weaponType.civilisation, PLAYER);
 		playerSettings[ENEMY] = new PlayerSetting(EPlayerType.HUMAN, ECivilisation.EGYPTIAN, ENEMY);
 
 		JSettlersGame.GameRunner game = AiTestUtils.createStartingGame(playerSettings, map);
-		startedGame = ReplayUtils.waitForGameStartup(game);
+		startedGame = PausedGameStartup.await(game);
 
 		MatchConstants.clock().setPausing(true); // the test thread executes the game
 		time = 1000;
@@ -143,7 +144,13 @@ public class SiegeProductionIT {
 		if (weaponType.usesAmmo()) {
 			assertTrue(weaponType + " failed to load its workshop ammunition", runUntil(() -> weapon.getAmmo() > 0, 60 * 1000));
 		}
+		Movable worker = MovableManager.getAllMovables().stream()
+				.filter(m -> m instanceof BuildingWorkerMovable
+						&& ((BuildingWorkerMovable) m).getGarrisonedBuilding() == workshop)
+				.map(m -> (Movable) m).findFirst().orElseThrow(() -> new AssertionError("No assigned engineer"));
+		assertTrue("Engineer must survive assembling the weapon", worker.isAlive());
 		runFor(60 * 1000);
+		assertTrue("Engineer must survive the following idle/work cycle", worker.isAlive());
 		assertEquals("Finishing one order must not create another weapon", 1, getWeapons(weaponType.movableType).size());
 	}
 
