@@ -42,3 +42,18 @@ test {
 	maxParallelForks = Runtime.runtime.availableProcessors().intdiv(2) ?: 1
 	maxHeapSize = "4G"
 }
+
+// Long, real AI matches are opt-in and run serially because MatchConstants is global.
+task fourCivilisationsIT(type: Test, dependsOn: testClasses) {
+	include '**/FourCivilisationsIT*'
+	maxParallelForks = 1
+	maxHeapSize = "4G"
+	outputs.upToDateWhen { false }
+	['minutes', 'checkpoint', 'civilisation', 'report'].each { key ->
+		def value = System.getProperty("playthrough.${key}")
+		if (value != null) systemProperty "playthrough.${key}", value
+	}
+	testLogging { showStandardStreams = true }
+}
+
+test { exclude 'jsettlers/integration/playthrough/**' }
