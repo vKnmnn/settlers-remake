@@ -73,7 +73,9 @@ public class GOSwingEventConverter extends AbstractEventConverter
 	public GOSwingEventConverter(Component component, GOEventHandlerProvider provider) {
 		super(provider);
 		this.scaleFactor = () -> {
-			AffineTransform trans = component.getGraphicsConfiguration().getDefaultTransform();
+			java.awt.GraphicsConfiguration configuration = component.getGraphicsConfiguration();
+			if (configuration == null) return 1.0; // Not attached yet, or already removed during a screen change.
+			AffineTransform trans = configuration.getDefaultTransform();
 			return (trans != null) ? trans.getScaleX() : 1.0;
 		};
 
@@ -90,7 +92,8 @@ public class GOSwingEventConverter extends AbstractEventConverter
 	}
 
 	private UIPoint convertToLocal(MouseEvent e) {
-		return new UIPoint(e.getX() * scaleFactor.get(), (e.getComponent().getHeight() - e.getY()) * scaleFactor.get());
+		double scale = scaleFactor.get();
+		return new UIPoint(e.getX() * scale, (e.getComponent().getHeight() - e.getY()) * scale);
 
 	}
 
