@@ -48,7 +48,11 @@ public class SettlersComboboxUi extends BasicComboBoxUI {
 		super.installUI(c);
 		c.setOpaque(false);
 
-		((JComboBox<?>) c).setRenderer(new SettlersListCellRenderer());
+		JComboBox<?> combo = (JComboBox<?>) c;
+		// Preserve domain renderers (e.g. localized campaign names) across UI updates.
+		if (combo.getRenderer() == null || combo.getRenderer() instanceof javax.swing.plaf.UIResource) {
+			combo.setRenderer(new SettlersListCellRenderer());
+		}
 		c.setBorder(BorderFactory.createLineBorder(Color.WHITE));
 		c.setFont(UIDefaults.FONT_SMALL);
 	}

@@ -49,6 +49,6 @@ public final class TextAreaUiFactory {
 		if (ELFStyle.TEXT_DEFAULT == c.getClientProperty(ELFStyle.KEY)) {
 			return new TextAreaUiDark();
 		}
-		return FORWARD.create(c);
+		return new javax.swing.plaf.basic.BasicTextAreaUI();
 	}
 }

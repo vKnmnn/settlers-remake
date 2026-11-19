@@ -79,6 +79,20 @@ public class JSettlersLookAndFeel {
 			TextAreaUiFactory.FORWARD.loadFromType("TextAreaUI");
 			ComboboxUiFactory.FORWARD.loadFromType("ComboBoxUI");
 
+			// Plain Swing content must use the same dark palette as the textured game panels.
+			Color content = new Color(35, 31, 25);
+			Color selected = new Color(106, 82, 35);
+			for (String type : new String[] { "List", "Table", "TextArea", "TableHeader", "Viewport", "OptionPane" }) {
+				UIManager.put(type + ".background", content);
+				UIManager.put(type + ".foreground", UIDefaults.LABEL_TEXT_COLOR);
+				UIManager.put(type + ".font", UIDefaults.FONT_PLAIN);
+				UIManager.put(type + ".selectionBackground", selected);
+				UIManager.put(type + ".selectionForeground", Color.WHITE);
+			}
+			UIManager.put("Table.gridColor", new Color(91, 77, 55));
+			UIManager.put("Table.alternateRowColor", new Color(44, 39, 30));
+			UIManager.put("TextArea.caretForeground", UIDefaults.LABEL_TEXT_COLOR);
+
 			// Scrollbar
 			UIManager.put("ScrollBar.width", 20);
 
@@ -109,6 +123,8 @@ public class JSettlersLookAndFeel {
 					"TextAreaUI", TextAreaUiFactory.class.getName(),
 					"ComboBoxUI", ComboboxUiFactory.class.getName(),
 					"TableUI", TableUiFactory.class.getName(),
+					"ListUI", javax.swing.plaf.basic.BasicListUI.class.getName(),
+					"TableHeaderUI", javax.swing.plaf.basic.BasicTableHeaderUI.class.getName(),
 					"TabbedPaneUI", BasicTabbedPaneUI.class.getName(),
 			};
 			UIManager.getDefaults().putDefaults(uiFactories);

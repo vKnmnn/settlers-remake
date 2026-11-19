@@ -44,6 +44,17 @@ public class CampaignCatalogTest {
 		assertEquals(mission, CampaignCatalog.findMission("egyptian.2").findFile(temporary.getRoot(), additional));
 	}
 
+	@Test public void availabilityRequiresAKnownInstalledMissionAndTracksRemoval() throws Exception {
+		File root = temporary.getRoot();
+		assertFalse(CampaignCatalog.hasInstalledMissions(root, null));
+		create("random.map");
+		assertFalse(CampaignCatalog.hasInstalledMissions(root));
+		File mission = create("mis_m/r/R1.MAP");
+		assertTrue(CampaignCatalog.hasInstalledMissions(null, root));
+		Files.delete(mission.toPath());
+		assertFalse(CampaignCatalog.hasInstalledMissions(root));
+	}
+
 	private File create(String path) throws Exception {
 		File file = new File(temporary.getRoot(), path);
 		Files.createDirectories(file.toPath().getParent());

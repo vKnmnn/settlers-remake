@@ -19,6 +19,7 @@ import jsettlers.graphics.localization.Labels;
 import jsettlers.logic.player.InitialGameState;
 import jsettlers.main.JSettlersGame;
 import jsettlers.main.swing.JSettlersFrame;
+import jsettlers.main.swing.lookandfeel.ELFStyle;
 import jsettlers.main.swing.settings.SettingsManager;
 
 /** Desktop campaign selection. Original map data must be supplied by the player. */
@@ -36,6 +37,8 @@ public final class CampaignPanel extends JPanel {
 		super(new BorderLayout(8, 8));
 		this.frame = frame;
 		this.progress = progress;
+		start.putClientProperty(ELFStyle.KEY, ELFStyle.BUTTON_STONE);
+		campaigns.putClientProperty(ELFStyle.KEY, ELFStyle.COMBOBOX);
 		campaigns.setRenderer(new DefaultListCellRenderer() {
 			@Override public Component getListCellRendererComponent(JList<?> list, Object value, int index, boolean selected, boolean focus) {
 				return super.getListCellRendererComponent(list, value instanceof CampaignCatalog.Campaign ? Labels.getString(((CampaignCatalog.Campaign) value).label) : "", index, selected, focus);

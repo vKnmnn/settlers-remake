@@ -44,6 +44,8 @@ import jsettlers.main.swing.JSettlersFrame;
 import jsettlers.main.swing.menu.campaign.CampaignPanel;
 import jsettlers.main.swing.menu.campaign.CampaignCatalog;
 import java.io.IOException;
+import java.io.File;
+import jsettlers.main.swing.settings.SettingsManager;
 import javax.swing.JOptionPane;
 import jsettlers.main.swing.lookandfeel.ELFStyle;
 import jsettlers.main.swing.lookandfeel.components.SplitedBackgroundPanel;
@@ -80,6 +82,7 @@ public class MainMenuPanel extends SplitedBackgroundPanel {
 
 	private final OpenPanel openSinglePlayerPanel;
 	private CampaignPanel campaignPanel;
+	private JToggleButton campaignButton;
 
 	public MainMenuPanel(JSettlersFrame settlersFrame) {
 		this.settlersFrame = settlersFrame;
@@ -89,7 +92,9 @@ public class MainMenuPanel extends SplitedBackgroundPanel {
 		SettingsMenuPanel settingsPanel = new SettingsMenuPanel(this);
 
 		registerMenu("main-panel-new-single-player-game-button", e -> setCenter("main-panel-new-single-player-game-button", openSinglePlayerPanel));
-		registerMenu("campaign-title", e -> {
+		campaignButton = registerMenu("campaign-title", e -> {
+			refreshCampaignAvailability();
+			if (!campaignButton.isEnabled()) return;
 			try {
 				if (campaignPanel == null) campaignPanel = new CampaignPanel(settlersFrame, settlersFrame.getCampaignProgress());
 				campaignPanel.refresh();
@@ -104,6 +109,7 @@ public class MainMenuPanel extends SplitedBackgroundPanel {
 			settingsPanel.initializeValues();
 		});
 
+		refreshCampaignAvailability();
 		initButtonPanel();
 		SwingUtilities.updateComponentTreeUI(this);
 
@@ -183,13 +189,14 @@ public class MainMenuPanel extends SplitedBackgroundPanel {
 		mainButtonPanel.add(serverPanel);
 	}
 
-	private void registerMenu(String translationKey, ActionListener listener) {
+	private JToggleButton registerMenu(String translationKey, ActionListener listener) {
 		JToggleButton bt = new JToggleButton(Labels.getString(translationKey));
 		bt.putClientProperty(ELFStyle.KEY, ELFStyle.BUTTON_MENU);
 		buttonGroup.add(bt);
 		bt.addActionListener(listener);
 		buttonPanel.add(bt);
 		bt.setPreferredSize(new Dimension(230, 60));
+		return bt;
 	}
 
 	private void loadSavegame(MapLoader map) {
@@ -211,7 +218,19 @@ public class MainMenuPanel extends SplitedBackgroundPanel {
 		}
 	}
 
+	private void refreshCampaignAvailability() {
+		SettingsManager settings = SettingsManager.getInstance();
+		String installed = settings.getSettlersFolder();
+		String additional = settings.getAdditionalMapsDirectory();
+		boolean available = CampaignCatalog.hasInstalledMissions(
+				installed == null || installed.isBlank() ? null : new File(installed),
+				additional == null || additional.isBlank() ? null : new File(additional));
+		campaignButton.setEnabled(available);
+		campaignButton.setToolTipText(available ? null : Labels.getString("campaign-missing-help"));
+	}
+
 	public void reset() {
+		refreshCampaignAvailability();
 		setCenter(emptyPanel);
 		getTitleLabel().setVisible(false);
 		buttonGroup.clearSelection();
@@ -226,6 +245,7 @@ public class MainMenuPanel extends SplitedBackgroundPanel {
 	}
 
 	private void setCenter(final JPanel panelToBeSet) {
+		refreshCampaignAvailability();
 		SwingUtilities.updateComponentTreeUI(panelToBeSet);
 		remove(2);
 		add(panelToBeSet);

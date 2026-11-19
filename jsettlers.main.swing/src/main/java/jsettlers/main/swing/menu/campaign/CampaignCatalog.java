@@ -62,6 +62,13 @@ public final class CampaignCatalog {
 			new Campaign("amazon", "S3Qota/Mis_M/Z", "z", 12, true),
 			new Campaign("gods", "S3Qota/Mis_M/G", "g", 12, true));
 
+	public static boolean hasInstalledMissions(File... roots) {
+		for (Campaign campaign : CAMPAIGNS) {
+			for (Mission mission : campaign.missions) if (mission.findFile(roots) != null) return true;
+		}
+		return false;
+	}
+
 	public static Mission findMission(String id) {
 		if (id == null) return null;
 		for (Campaign campaign : CAMPAIGNS) {

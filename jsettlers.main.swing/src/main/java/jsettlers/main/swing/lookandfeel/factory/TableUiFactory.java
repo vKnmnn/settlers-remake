@@ -33,7 +33,6 @@ public class TableUiFactory {
 	private TableUiFactory() {
 	}
 
-	private static final StoneBackgroundTable labelShort = new StoneBackgroundTable(UIDefaults.LABEL_TEXT_COLOR);
 
 	/**
 	 * Create PLAF
@@ -45,9 +44,9 @@ public class TableUiFactory {
 	public static ComponentUI createUI(JComponent c) {
 		Object style = c.getClientProperty(ELFStyle.KEY);
 		if(ELFStyle.TABLE == style) {
-			return labelShort;
+			return new StoneBackgroundTable(UIDefaults.LABEL_TEXT_COLOR);
 		}
 
-		return FORWARD.create(c);
+		return new javax.swing.plaf.basic.BasicTableUI();
 	}
 }
