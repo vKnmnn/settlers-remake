@@ -18,17 +18,19 @@ import java.awt.BorderLayout;
 import java.awt.FlowLayout;
 import java.awt.GridBagConstraints;
 import java.awt.GridBagLayout;
-import java.awt.GridLayout;
+import java.awt.Insets;
 import java.awt.event.ActionListener;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Comparator;
 import java.util.Iterator;
 import java.util.List;
+import java.util.Random;
 
 import javax.swing.BorderFactory;
 import javax.swing.ImageIcon;
 import javax.swing.JButton;
+import javax.swing.JComponent;
 import javax.swing.JComboBox;
 import javax.swing.JLabel;
 import javax.swing.JPanel;
@@ -40,6 +42,7 @@ import javax.swing.SwingUtilities;
 import javax.swing.border.EmptyBorder;
 
 import jsettlers.common.menu.ENetworkMessage;
+import jsettlers.common.player.ECivilisation;
 import jsettlers.common.menu.EProgressState;
 import jsettlers.common.menu.IChatMessageListener;
 import jsettlers.common.menu.IJoinPhaseMultiplayerGameConnector;
@@ -55,6 +58,7 @@ import jsettlers.graphics.localization.Labels;
 import jsettlers.logic.map.loading.EMapStartResources;
 import jsettlers.logic.map.loading.MapLoader;
 import jsettlers.logic.player.InitialGameState;
+import jsettlers.logic.player.MatchRules;
 import jsettlers.logic.player.PlayerSetting;
 import jsettlers.main.JSettlersGame;
 import jsettlers.main.swing.JSettlersFrame;
@@ -96,8 +100,14 @@ public class JoinGamePanel extends BackgroundPanel {
 	private final JLabel mapImage = new JLabel();
 	private final JLabel numberOfPlayersLabel = new JLabel();
 	private final NumberOfPlayersComboBox numberOfPlayersComboBox = new NumberOfPlayersComboBox(this);
-	private final JLabel peaceTimeLabel = new JLabel();
-	private final JComboBox<EPeaceTime> peaceTimeComboBox = new JComboBox<>();
+	private final JLabel teamPresetLabel = new JLabel();
+	private final JComboBox<GameSetupOptions.Teams> teamPresetComboBox = new JComboBox<>(GameSetupOptions.Teams.values());
+	private final JLabel amazonsLabel = new JLabel();
+	private final JComboBox<AmazonOption> amazonsAllowed = new JComboBox<>(AmazonOption.values());
+	private final JLabel gameModeLabel = new JLabel();
+	private final JComboBox<GameModeOption> gameModeComboBox = new JComboBox<>();
+	private boolean singlePlayer;
+	private boolean applyingTeamPreset;
 	private final JLabel startResourcesLabel = new JLabel();
 	private final JComboBox<MapStartResourcesUIWrapper> startResourcesComboBox = new JComboBox<>();
 	private final JPanel playerSlotsPanel = new JPanel();
@@ -110,6 +120,7 @@ public class JoinGamePanel extends BackgroundPanel {
 	private final JLabel slotsHeadlineTeam = new JLabel();
 	private final JTextField chatInputField = new JTextField();
 	private final JTextArea chatArea = new JTextArea();
+	private final JPanel chatPanel = new JPanel();
 	private final JButton sendChatMessageButton = new JButton();
 	private MapLoader mapLoader;
 	private final List<PlayerSlot> playerSlots = new ArrayList<>();
@@ -129,13 +140,7 @@ public class JoinGamePanel extends BackgroundPanel {
 		JPanel settingsPanelWrapper = new JPanel();
 		westPanel.add(settingsPanelWrapper, BorderLayout.CENTER);
 		settingsPanelWrapper.add(settingsPanel);
-		//settingsPanel.setLayout(new GridLayout(0, 2, 20, 0));
-		JPanel settingsLabelPanel = new JPanel();
-		settingsLabelPanel.setLayout(new GridLayout(3, 0, 0, 20));
-		JPanel settingsComboBoxPanel = new JPanel();
-		settingsComboBoxPanel.setLayout(new GridLayout(3, 0, 0, 20));
-		settingsPanel.add(settingsLabelPanel);
-		settingsPanel.add(settingsComboBoxPanel);
+		settingsPanel.setLayout(new GridBagLayout());
 		mapPanel.setLayout(new BorderLayout());
 		JPanel mapNameLabelWrapper = new JPanel();
 		mapPanel.add(mapNameLabelWrapper, BorderLayout.NORTH);
@@ -143,14 +148,15 @@ public class JoinGamePanel extends BackgroundPanel {
 		mapNameLabel.setHorizontalAlignment(SwingConstants.CENTER);
 		mapPanel.add(mapImage, BorderLayout.CENTER);
 		mapImage.setBorder(BorderFactory.createEmptyBorder(20, 20, 20, 20));
-		settingsLabelPanel.add(numberOfPlayersLabel);
-		settingsComboBoxPanel.add(numberOfPlayersComboBox);
-		settingsLabelPanel.add(startResourcesLabel);
-		settingsComboBoxPanel.add(startResourcesComboBox);
-		settingsLabelPanel.add(peaceTimeLabel);
-		settingsComboBoxPanel.add(peaceTimeComboBox);
+		addSettingRow(0, numberOfPlayersLabel, numberOfPlayersComboBox);
+		addSettingRow(1, startResourcesLabel, startResourcesComboBox);
+		addSettingRow(2, teamPresetLabel, teamPresetComboBox);
+		addSettingRow(3, gameModeLabel, gameModeComboBox);
+		addSettingRow(4, amazonsLabel, amazonsAllowed);
+		teamPresetComboBox.addActionListener(event -> applyTeamPreset());
+		amazonsAllowed.setSelectedItem(AmazonOption.YES);
+		amazonsAllowed.addActionListener(event -> playerSlots.forEach(slot -> slot.setAmazonsAllowed(amazonsAllowed.getSelectedItem() == AmazonOption.YES)));
 		sendChatMessageButton.setBorder(BorderFactory.createEmptyBorder(5, 5, 5, 15));
-		JPanel chatPanel = new JPanel();
 		chatPanel.setLayout(new BorderLayout(0, 10));
 		JPanel chatInputPanel = new JPanel();
 		chatInputPanel.setLayout(new BorderLayout(10, 0));
@@ -177,11 +183,27 @@ public class JoinGamePanel extends BackgroundPanel {
 		add(content);
 	}
 
+	private void addSettingRow(int row, JLabel label, JComponent field) {
+		GridBagConstraints constraints = new GridBagConstraints();
+		constraints.gridx = 0;
+		constraints.gridy = row;
+		constraints.anchor = GridBagConstraints.LINE_START;
+		constraints.insets = new Insets(6, 0, 6, 16);
+		settingsPanel.add(label, constraints);
+		constraints.gridx = 1;
+		constraints.weightx = 1;
+		constraints.fill = GridBagConstraints.HORIZONTAL;
+		constraints.insets = new Insets(6, 0, 6, 0);
+		settingsPanel.add(field, constraints);
+	}
+
 	private void setStyle() {
 		mapNameLabel.putClientProperty(ELFStyle.KEY, ELFStyle.LABEL_LONG);
 		numberOfPlayersLabel.putClientProperty(ELFStyle.KEY, ELFStyle.LABEL_SHORT);
 		startResourcesLabel.putClientProperty(ELFStyle.KEY, ELFStyle.LABEL_SHORT);
-		peaceTimeLabel.putClientProperty(ELFStyle.KEY, ELFStyle.LABEL_SHORT);
+		teamPresetLabel.putClientProperty(ELFStyle.KEY, ELFStyle.LABEL_SHORT);
+		gameModeLabel.putClientProperty(ELFStyle.KEY, ELFStyle.LABEL_SHORT);
+		amazonsLabel.putClientProperty(ELFStyle.KEY, ELFStyle.LABEL_SHORT);
 		titleLabel.putClientProperty(ELFStyle.KEY, ELFStyle.LABEL_HEADER);
 		cancelButton.putClientProperty(ELFStyle.KEY, ELFStyle.BUTTON_MENU);
 		startGameButton.putClientProperty(ELFStyle.KEY, ELFStyle.BUTTON_MENU);
@@ -194,7 +216,9 @@ public class JoinGamePanel extends BackgroundPanel {
 		chatInputField.putClientProperty(ELFStyle.KEY, ELFStyle.TEXT_DEFAULT);
 		chatArea.putClientProperty(ELFStyle.KEY, ELFStyle.PANEL_DARK);
 		startResourcesComboBox.putClientProperty(ELFStyle.KEY, ELFStyle.COMBOBOX);
-		peaceTimeComboBox.putClientProperty(ELFStyle.KEY, ELFStyle.COMBOBOX);
+		teamPresetComboBox.putClientProperty(ELFStyle.KEY, ELFStyle.COMBOBOX);
+		gameModeComboBox.putClientProperty(ELFStyle.KEY, ELFStyle.COMBOBOX);
+		amazonsAllowed.putClientProperty(ELFStyle.KEY, ELFStyle.COMBOBOX);
 		chatArea.putClientProperty(ELFStyle.KEY, ELFStyle.TEXT_DEFAULT);
 		chatArea.setEditable(false);
 		SwingUtilities.updateComponentTreeUI(this);
@@ -205,7 +229,9 @@ public class JoinGamePanel extends BackgroundPanel {
 		startResourcesLabel.setText(Labels.getString("join-game-panel-start-resources"));
 		cancelButton.setText(Labels.getString("join-game-panel-cancel"));
 		startGameButton.setText(Labels.getString("join-game-panel-start"));
-		peaceTimeLabel.setText(Labels.getString("join-game-panel-peace-time"));
+		teamPresetLabel.setText(Labels.getString("join-game-panel-team-preset"));
+		amazonsLabel.setText(Labels.getString("join-game-panel-amazons"));
+		gameModeLabel.setText(Labels.getString("join-game-panel-mode"));
 		slotsHeadlinePlayerNameLabel.setText(Labels.getString("join-game-panel-player-name"));
 		slotsHeadlineCivilisation.setText(Labels.getString("join-game-panel-civilisation"));
 		slotsHeadlineType.setText(Labels.getString("join-game-panel-player-type"));
@@ -217,18 +243,20 @@ public class JoinGamePanel extends BackgroundPanel {
 	public void setSinglePlayerMap(MapLoader mapLoader) {
 		this.playerSlotFactory = new SinglePlayerSlotFactory();
 		titleLabel.setText(Labels.getString("join-game-panel-new-single-player-game-title"));
-		peaceTimeComboBox.setEnabled(true);
+		setLocalOptionsVisible(true);
 		startResourcesComboBox.setEnabled(true);
 		startGameButton.setVisible(true);
 		setChatVisible(false);
-		cancelButton.addActionListener(e -> settlersFrame.showMainMenu());
 		setStartButtonActionListener(e -> {
+			applyTeamPreset();
 			long randomSeed = System.currentTimeMillis();
+			Random civilisationRandom = new Random(randomSeed);
 			PlayerSetting[] playerSettings = playerSlots.stream()
 					.sorted(Comparator.comparingInt(PlayerSlot::getSlot))
 					.map(playerSlot -> {
 						if (playerSlot.isAvailable()) {
-							return new PlayerSetting(playerSlot.getPlayerType(), playerSlot.getCivilisation(),
+							return new PlayerSetting(playerSlot.getPlayerType(),
+								GameSetupOptions.civilisationFor(playerSlot.getCivilisation(), amazonsAllowed.getSelectedItem() == AmazonOption.YES, civilisationRandom),
 									playerSlot.getTeam());
 						} else {
 							return new PlayerSetting();
@@ -237,7 +265,8 @@ public class JoinGamePanel extends BackgroundPanel {
 					.toArray(PlayerSetting[]::new);
 
 			MapStartResourcesUIWrapper selected = (MapStartResourcesUIWrapper) startResourcesComboBox.getSelectedItem();
-			InitialGameState initialGameState = new InitialGameState(playerSlots.get(0).getSlot(), playerSettings, randomSeed, selected.getStartResources());
+			InitialGameState initialGameState = new InitialGameState(playerSlots.get(0).getSlot(), playerSettings, randomSeed, selected.getStartResources(),
+					new MatchRules(((GameModeOption) gameModeComboBox.getSelectedItem()).mode));
 			JSettlersGame game = new JSettlersGame(mapLoader, initialGameState);
 			IStartingGame startingGame = game.start();
 			settlersFrame.showStartingGamePanel(startingGame);
@@ -251,7 +280,7 @@ public class JoinGamePanel extends BackgroundPanel {
 	public void setNewMultiPlayerMap(MapLoader mapLoader, IMultiplayerConnector connector) {
 		this.playerSlotFactory = new HostOfMultiplayerPlayerSlotFactory(connector);
 		titleLabel.setText(Labels.getString("join-game-panel-new-multi-player-game-title"));
-		peaceTimeComboBox.setEnabled(false);
+		setLocalOptionsVisible(false);
 		startResourcesComboBox.setEnabled(false);
 		startGameButton.setVisible(true);
 		setChatVisible(true);
@@ -300,10 +329,9 @@ public class JoinGamePanel extends BackgroundPanel {
 	public void setJoinMultiPlayerMap(IJoinPhaseMultiplayerGameConnector joinMultiPlayerMap, MapLoader mapLoader, String playerUUID) {
 		playerSlotFactory = new ClientOfMultiplayerPlayerSlotFactory();
 		titleLabel.setText(Labels.getString("join-game-panel-join-multi-player-game-title"));
-		peaceTimeComboBox.setEnabled(false);
+		setLocalOptionsVisible(false);
 		startResourcesComboBox.setEnabled(false);
 		setChatVisible(true);
-		cancelButton.addActionListener(e -> settlersFrame.showMainMenu());
 		startGameButton.setVisible(false);
 
 		prepareUiFor(mapLoader);
@@ -353,6 +381,7 @@ public class JoinGamePanel extends BackgroundPanel {
 	}
 
 	private void setChatVisible(boolean isVisible) {
+		chatPanel.setVisible(isVisible);
 		chatArea.setVisible(isVisible);
 		chatInputField.setVisible(isVisible);
 		sendChatMessageButton.setVisible(isVisible);
@@ -401,17 +430,32 @@ public class JoinGamePanel extends BackgroundPanel {
 
 	private void prepareUiFor(MapLoader mapLoader) {
 		this.mapLoader = mapLoader;
+		numberOfPlayersComboBox.informGame(null);
 		mapNameLabel.setText(mapLoader.getMapName());
 		mapImage.setIcon(new ImageIcon(JSettlersSwingUtil.createBufferedImageFrom(mapLoader)));
-		peaceTimeComboBox.removeAllItems();
-		peaceTimeComboBox.addItem(EPeaceTime.WITHOUT);
 		startResourcesComboBox.removeAllItems();
-		Arrays.stream(EMapStartResources.values())
+		startResourcesComboBox.addItem(new MapStartResourcesUIWrapper(EMapStartResources.MAP_DEFAULT));
+		Arrays.stream(EMapStartResources.values()).filter(resources -> resources != EMapStartResources.MAP_DEFAULT)
 				.map(MapStartResourcesUIWrapper::new)
 				.forEach(startResourcesComboBox::addItem);
-		startResourcesComboBox.setSelectedIndex(EMapStartResources.HIGH_GOODS.value - 1);
-		numberOfPlayersComboBox.reset(mapLoader.getMaxPlayers());
+		startResourcesComboBox.setSelectedIndex(0);
+		teamPresetComboBox.setEnabled(false);
+		teamPresetComboBox.setSelectedItem(GameSetupOptions.Teams.MANUAL);
+		amazonsAllowed.setSelectedItem(AmazonOption.YES);
+		gameModeComboBox.removeAllItems();
+		for (MatchRules.Mode mode : MatchRules.Mode.values()) gameModeComboBox.addItem(new GameModeOption(mode));
+		gameModeComboBox.setSelectedIndex(0);
+		gameModeComboBox.setEnabled(singlePlayer && mapLoader.supportsCustomMatchRules());
+		gameModeComboBox.setToolTipText(mapLoader.supportsCustomMatchRules() ? null : Labels.getString("join-game-panel-mode-locked"));
 		buildPlayerSlots();
+		numberOfPlayersComboBox.reset(mapLoader.getMaxPlayers());
+		boolean lockedTeams = Arrays.stream(mapLoader.getFileHeader().getPlayerSettings()).anyMatch(setting -> setting.getTeamId() != null);
+		teamPresetComboBox.setEnabled(singlePlayer && !lockedTeams);
+		teamPresetComboBox.setToolTipText(lockedTeams ? Labels.getString("join-game-panel-teams-locked") : null);
+		boolean lockedAmazons = Arrays.stream(mapLoader.getFileHeader().getPlayerSettings()).anyMatch(setting -> setting.getCivilisation() == ECivilisation.AMAZON);
+		amazonsAllowed.setEnabled(singlePlayer && !lockedAmazons);
+		amazonsAllowed.setToolTipText(lockedAmazons ? Labels.getString("join-game-panel-amazons-locked") : null);
+		if (!lockedTeams) teamPresetComboBox.setSelectedItem(GameSetupOptions.Teams.FREE_FOR_ALL);
 		updateNumberOfPlayerSlots(mapLoader.getMaxPlayers());
 	}
 
@@ -447,6 +491,40 @@ public class JoinGamePanel extends BackgroundPanel {
 				playerSlot.disablePlayerTypeInput();
 			}
 		}
+		for (PlayerSlot slot : playerSlots) {
+			slot.addTeamChangeListener(() -> {
+				if (singlePlayer && !applyingTeamPreset) teamPresetComboBox.setSelectedItem(GameSetupOptions.Teams.MANUAL);
+			});
+			slot.addPlayerTypeChangeListener(this::applyTeamPreset);
+		}
+
+	}
+
+	private void setLocalOptionsVisible(boolean visible) {
+		singlePlayer = visible;
+		gameModeLabel.setVisible(visible);
+		gameModeComboBox.setVisible(visible);
+		teamPresetLabel.setVisible(visible);
+		teamPresetComboBox.setVisible(visible);
+		amazonsLabel.setVisible(visible);
+		amazonsAllowed.setVisible(visible);
+		startResourcesLabel.setVisible(visible);
+		startResourcesComboBox.setVisible(visible);
+	}
+
+	private void applyTeamPreset() {
+		if (!singlePlayer || !teamPresetComboBox.isEnabled() || applyingTeamPreset) return;
+		GameSetupOptions.Teams preset = (GameSetupOptions.Teams) teamPresetComboBox.getSelectedItem();
+		if (preset == null || preset == GameSetupOptions.Teams.MANUAL) return;
+		applyingTeamPreset = true;
+		try {
+			List<PlayerSlot> active = new ArrayList<>();
+			for (PlayerSlot slot : playerSlots) if (slot.isAvailable()) active.add(slot);
+			for (int i = 0; i < active.size(); i++) {
+				PlayerSlot slot = active.get(i);
+				slot.setTeam(GameSetupOptions.teamFor(preset, i, active.size(), slot.getPlayerType()), true);
+			}
+		} finally { applyingTeamPreset = false; }
 	}
 
 	private void setStartButtonActionListener(ActionListener actionListener) {
@@ -468,15 +546,15 @@ public class JoinGamePanel extends BackgroundPanel {
 		playerSlotsPanel.removeAll();
 		addPlayerSlotHeadline();
 		for (int i = 0; i < playerSlots.size(); i++) {
-			if (i < (int) amount) {
+			playerSlots.get(i).setAvailable(i < amount);
+			if (i < amount) {
 				playerSlots.get(i).addTo(playerSlotsPanel, i + 1);
-			} else {
-				playerSlots.get(i).setAvailable(false);
 			}
 		}
 		SwingUtilities.updateComponentTreeUI(playerSlotsPanel);
 		SlotToggleGroup slotToggleGroup = new SlotToggleGroup();
 		playerSlots.forEach(slotToggleGroup::add);
+		applyTeamPreset();
 	}
 
 	private void addPlayerSlotHeadline() {
@@ -511,12 +589,15 @@ public class JoinGamePanel extends BackgroundPanel {
 		playerSlotsPanel.add(slotsHeadlineTeam, constraints);
 	}
 
-	private enum EPeaceTime {
-		WITHOUT;
-
-		@Override
-		public String toString() {
-			return Labels.getString("peace-time-" + name());
-		}
+	private enum AmazonOption {
+		YES, NO;
+		@Override public String toString() { return Labels.getString("setup-option-" + name()); }
 	}
+
+	private static final class GameModeOption {
+		private final MatchRules.Mode mode;
+		private GameModeOption(MatchRules.Mode mode) { this.mode = mode; }
+		@Override public String toString() { return Labels.getString("game-mode-" + mode.name()); }
+	}
+
 }

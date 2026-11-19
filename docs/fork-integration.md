@@ -455,3 +455,11 @@ the existing free-cell check for escape steps and random evasive directions;
 siege units retain their full footprint checks. Normal pathfinding continues to
 enforce territory restrictions. Regression coverage exercises the failing
 neutral-ground escape and three complete forester planting/return cycles.
+
+## New-game configuration (2026-11-19)
+
+The desktop setup now offers map-authored starting goods, team presets, an
+Amazon permission selector, and persistent military/free-play rules. Fixed
+scenario settings and saved-game rules take precedence. Ghidra findings,
+validation and remaining original options are documented in
+[new-game-options.md](new-game-options.md).

@@ -158,6 +158,7 @@ public class PlayerSlot {
 			}
 		});
 		civilisationComboBox.addActionListener(e -> {
+			if (civilisationComboBox.getSelectedItem() == null) return;
 			ECivilisation newCivilisation = getCivilisation();
 			if (informGameAboutChanges && newCivilisation != civilisation) {
 				gameToBeInformedAboutChanges.setCivilisation(index, newCivilisation);
@@ -209,6 +210,24 @@ public class PlayerSlot {
 	private void initializeComboBoxes() {
 		civilisationComboBox.addItem(new CivilisationUiWrapper());
 		for(ECivilisation civ : ECivilisation.values()) civilisationComboBox.addItem(new CivilisationUiWrapper(civ));
+	}
+
+	public void addTeamChangeListener(Runnable listener) {
+		teamComboBox.addActionListener(event -> listener.run());
+	}
+
+	public void addPlayerTypeChangeListener(Runnable listener) {
+		typeComboBox.addActionListener(event -> listener.run());
+	}
+
+	public void setAmazonsAllowed(boolean allowed) {
+		ECivilisation selected = getCivilisation();
+		civilisationComboBox.removeAllItems();
+		civilisationComboBox.addItem(new CivilisationUiWrapper());
+		for (ECivilisation candidate : ECivilisation.values()) {
+			if (allowed || candidate != ECivilisation.AMAZON) civilisationComboBox.addItem(new CivilisationUiWrapper(candidate));
+		}
+		setCivilisation(!allowed && selected == ECivilisation.AMAZON ? null : selected, true);
 	}
 
 	public void setPlayerName(String playerName) {
