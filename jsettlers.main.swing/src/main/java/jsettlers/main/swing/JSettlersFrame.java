@@ -188,6 +188,11 @@ public class JSettlersFrame extends JFrame {
 			areaContainer.updateFPSLimit(fpsLimit);
 			revalidate();
 			repaint();
+			// The canvas can receive its first resize before it is attached to the visible window.
+			// Recalculate after Swing has laid it out so the graphics context gets the real size.
+			SwingUtilities.invokeLater(() -> {
+				if (areaContainer != null) areaContainer.notifyResize();
+			});
 		});
 	}
 

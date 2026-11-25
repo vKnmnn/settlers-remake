@@ -20,8 +20,6 @@ import java.awt.event.ComponentEvent;
 import java.awt.event.ComponentListener;
 import java.awt.geom.AffineTransform;
 
-import javax.swing.SwingUtilities;
-
 import go.graphics.swing.ContextContainer;
 
 public abstract class ContextCreator<T extends Component> implements ComponentListener{
@@ -69,16 +67,15 @@ public abstract class ContextCreator<T extends Component> implements ComponentLi
 
 	@Override
 	public void componentResized(ComponentEvent componentEvent) {
-		if(!SwingUtilities.windowForComponent(canvas).isFocused()) return;
-
 		synchronized (wnd_lock) {
-			AffineTransform scaleInfo = canvas.getGraphicsConfiguration().getDefaultTransform();
+			GraphicsConfiguration graphicsConfiguration = canvas.getGraphicsConfiguration();
+			AffineTransform scaleInfo = graphicsConfiguration != null ? graphicsConfiguration.getDefaultTransform() : null;
 
 			double scaleX = 1;
 			double scaleY = 1;
 			if(scaleInfo != null) {
 				scaleX = scaleInfo.getScaleX();
-				scaleY = scaleInfo.getScaleX();
+				scaleY = scaleInfo.getScaleY();
 			}
 			new_width = (int) (canvas.getWidth()*scaleX);
 			new_height = (int) (canvas.getHeight()*scaleY);
