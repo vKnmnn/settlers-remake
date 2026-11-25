@@ -707,12 +707,17 @@ class OriginalMapFileContentReader {
 	}
 
 	OriginalSinglePlayerWinCondition readWinCondition(MainGrid mainGrid) throws MapLoadException {
-		MapResourceInfo filePart = findAndDecryptFilePartSafe(EOriginalMapFilePartType.WIN_COND);
+		Optional<MapResourceInfo> optionalFilePart = findAndDecryptFilePart(EOriginalMapFilePartType.WIN_COND);
+		OriginalSinglePlayerWinCondition winCondition = new OriginalSinglePlayerWinCondition(mainGrid);
+		if (optionalFilePart.isEmpty()) {
+			// Many original campaign maps rely on the game's default objective: defeat all enemies.
+			return winCondition;
+		}
+
+		MapResourceInfo filePart = optionalFilePart.get();
 		if (filePart.size < 119) {
 			throw new MapLoadException("Original map victory conditions are truncated (expected at least 119 bytes).");
 		}
-
-		OriginalSinglePlayerWinCondition winCondition = new OriginalSinglePlayerWinCondition(mainGrid);
 
 		// - file position
 		int pos = filePart.offset;

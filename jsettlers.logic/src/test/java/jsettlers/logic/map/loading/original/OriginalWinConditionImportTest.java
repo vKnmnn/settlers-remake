@@ -59,6 +59,14 @@ public class OriginalWinConditionImportTest {
         read(buildingConditions());
     }
 
+    @Test
+    public void missingVictorySectionUsesDefaultEnemyEliminationObjective() throws Exception {
+        OriginalSinglePlayerWinCondition condition = readWithoutVictorySection();
+        assertNotNull(condition);
+        assertTrue(goals(condition).isEmpty());
+        assertTrue(killTargets(condition).isEmpty());
+    }
+
     @Test(expected = MapLoadException.class)
     public void rejectsTruncatedConditions() throws Exception {
         read(new byte[118]);
@@ -87,11 +95,26 @@ public class OriginalWinConditionImportTest {
         return reader.readWinCondition(null);
     }
 
+    private OriginalSinglePlayerWinCondition readWithoutVictorySection() throws Exception {
+        ByteBuffer file = ByteBuffer.allocate(16).order(ByteOrder.LITTLE_ENDIAN);
+        file.putInt(0).putInt(10); // checksum is not involved in this parser unit test
+        file.putInt(0).putInt(8); // EOF, with no optional WIN_COND resource
+        OriginalMapFileContentReader reader = new OriginalMapFileContentReader(new ByteArrayInputStream(file.array()));
+        reader.loadMapResources();
+        return reader.readWinCondition(null);
+    }
+
     @SuppressWarnings("unchecked")
     private Set<OriginalProduceGoodsWinCondition> goals(OriginalSinglePlayerWinCondition condition) throws Exception {
         // Inspect the parsed data without coupling this format test to gameplay or defeat rules.
         Field goals = OriginalSinglePlayerWinCondition.class.getDeclaredField("produceToWin");
         goals.setAccessible(true);
         return (Set<OriginalProduceGoodsWinCondition>) goals.get(condition);
+    }
+
+    private java.util.BitSet killTargets(OriginalSinglePlayerWinCondition condition) throws Exception {
+        Field killToWin = OriginalSinglePlayerWinCondition.class.getDeclaredField("killToWin");
+        killToWin.setAccessible(true);
+        return (java.util.BitSet) killToWin.get(condition);
     }
 }
