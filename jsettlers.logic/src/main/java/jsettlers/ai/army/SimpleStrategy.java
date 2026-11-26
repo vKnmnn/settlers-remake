@@ -24,7 +24,8 @@ public abstract class SimpleStrategy extends ArmyModule {
 	public SimpleStrategy(ArmyFramework parent) {
 		super(parent);
 
-		this.attackerCountFactor = ATTACKER_COUNT_FACTOR_BY_PLAYER_TYPE[parent.getPlayer().getPlayerType().ordinal()];
+		this.attackerCountFactor = parent.getPlayer().getPlayerType().isS3Reconstruction() ? 1F
+				: ATTACKER_COUNT_FACTOR_BY_PLAYER_TYPE[parent.getPlayer().getPlayerType().ordinal()];
 	}
 
 

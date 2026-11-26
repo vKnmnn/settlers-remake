@@ -463,3 +463,20 @@ Amazon permission selector, and persistent military/free-play rules. Fixed
 scenario settings and saved-game rules take precedence. Ghidra findings,
 validation and remaining original options are documented in
 [new-game-options.md](new-game-options.md).
+
+### Original-derived AI profiles (2026-11-26)
+
+The four legacy JSettlers AI levels remain selectable. Two opt-in, explicitly
+experimental S3 reconstruction profiles add recovered building-industry demand
+rules, count-based attack gates and the original campaign easy handicaps.
+Campaigns also offer AI selection. This is a partial reconstruction, not the
+complete original agent system; evidence, implemented rules and remaining
+adapters are listed in [original-ai.md](original-ai.md).
+
+The earlier soldier-order warning about client slots being disguised as HUMAN
+has now been addressed at the settings layer: clients/replays retain simulation
+profiles and independently suppress local AI execution. Existing soldier-order
+behaviour itself is unchanged. AI decisions consume their shared RNG in player
+order. Regression tests cover rule boundaries, actual depletion/damage, profile
+round trips, execution ownership, and both profiles for all four civilisations
+with save/load. The desktop distribution builds successfully.

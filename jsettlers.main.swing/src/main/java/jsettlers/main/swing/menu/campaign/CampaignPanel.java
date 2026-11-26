@@ -16,6 +16,8 @@ import javax.swing.JScrollPane;
 import javax.swing.JTextArea;
 import javax.swing.SwingWorker;
 import jsettlers.graphics.localization.Labels;
+import jsettlers.common.ai.EPlayerType;
+import jsettlers.main.swing.menu.joinpanel.slots.PlayerTypeUiWrapper;
 import jsettlers.logic.player.InitialGameState;
 import jsettlers.main.JSettlersGame;
 import jsettlers.main.swing.JSettlersFrame;
@@ -31,6 +33,7 @@ public final class CampaignPanel extends JPanel {
 	private final JList<CampaignCatalog.Mission> list = new JList<>(missions);
 	private final JTextArea description = new JTextArea();
 	private final JButton start = new JButton(Labels.getString("campaign-start"));
+	private final JComboBox<PlayerTypeUiWrapper> computerType = new JComboBox<>();
 	private boolean loading;
 
 	public CampaignPanel(JSettlersFrame frame, CampaignProgress progress) {
@@ -59,7 +62,18 @@ public final class CampaignPanel extends JPanel {
 		JPanel body = new JPanel(new GridLayout(1, 2, 12, 0));
 		body.add(new JScrollPane(list));
 		body.add(new JScrollPane(description));
-		add(campaigns, BorderLayout.NORTH);
+		for (EPlayerType type : EPlayerType.VALUES_AI_ONLY) {
+			PlayerTypeUiWrapper entry = new PlayerTypeUiWrapper(type);
+			computerType.addItem(entry);
+			if (type == EPlayerType.AI_HARD) computerType.setSelectedItem(entry);
+		}
+		computerType.putClientProperty(ELFStyle.KEY, ELFStyle.COMBOBOX);
+		computerType.setToolTipText(Labels.getString("campaign-ai"));
+		computerType.getAccessibleContext().setAccessibleName(Labels.getString("campaign-ai"));
+		JPanel selectors = new JPanel(new GridLayout(2, 1, 0, 8));
+		selectors.add(campaigns);
+		selectors.add(computerType);
+		add(selectors, BorderLayout.NORTH);
 		add(body, BorderLayout.CENTER);
 		add(start, BorderLayout.SOUTH);
 		campaigns.addActionListener(event -> refresh());
@@ -105,17 +119,20 @@ public final class CampaignPanel extends JPanel {
 		if (loading || mission == null || !progress.isUnlocked(mission)) return;
 		File file = findFile(mission);
 		if (file == null) { updateSelection(); return; }
+		EPlayerType selectedType = ((PlayerTypeUiWrapper) computerType.getSelectedItem()).getPlayerType();
 		loading = true;
+		computerType.setEnabled(false);
 		campaigns.setEnabled(false);
 		list.setEnabled(false);
 		updateSelection();
 		new SwingWorker<PreparedMission, Void>() {
 			@Override protected PreparedMission doInBackground() throws Exception {
 				CampaignMapLoader loader = new CampaignMapLoader(file);
-				return new PreparedMission(loader, loader.initialState(System.currentTimeMillis()));
+				return new PreparedMission(loader, loader.initialState(System.currentTimeMillis(), selectedType));
 			}
 			@Override protected void done() {
 				loading = false;
+				computerType.setEnabled(true);
 				campaigns.setEnabled(true);
 				list.setEnabled(true);
 				updateSelection();

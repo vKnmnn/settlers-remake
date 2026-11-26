@@ -20,10 +20,19 @@ public final class CampaignMapLoader extends OriginalMapLoader {
 	public CampaignMapLoader(File file) throws MapLoadException { super(new ListedMapFile(file)); }
 
 	public InitialGameState initialState(long seed) throws MapLoadException {
-		return initialState((OriginalMapFileContent) getMapData(), seed);
+		return initialState(seed, EPlayerType.AI_HARD);
+	}
+
+	public InitialGameState initialState(long seed, EPlayerType computerType) throws MapLoadException {
+		return initialState((OriginalMapFileContent) getMapData(), seed, computerType);
 	}
 
 	static InitialGameState initialState(OriginalMapFileContent data, long seed) throws MapLoadException {
+		return initialState(data, seed, EPlayerType.AI_HARD);
+	}
+
+	static InitialGameState initialState(OriginalMapFileContent data, long seed, EPlayerType computerType) throws MapLoadException {
+		if (computerType == null || !computerType.isAi()) throw new IllegalArgumentException("Campaign opponents must use an AI profile");
 		PlayerSetting[] players = new PlayerSetting[data.getPlayerCount()];
 		for (byte player = 0; player < players.length; player++) {
 			ECivilisation civilisation;
@@ -34,7 +43,7 @@ public final class CampaignMapLoader extends OriginalMapLoader {
 			case AMAZONS: civilisation = ECivilisation.AMAZON; break;
 			default: throw new MapLoadException("Campaign player has no fixed civilization: " + player);
 			}
-			players[player] = new PlayerSetting(player == 0 ? EPlayerType.HUMAN : EPlayerType.AI_HARD, civilisation, player);
+			players[player] = new PlayerSetting(player == 0 ? EPlayerType.HUMAN : computerType, civilisation, player);
 		}
 		return new InitialGameState((byte) 0, players, seed);
 	}

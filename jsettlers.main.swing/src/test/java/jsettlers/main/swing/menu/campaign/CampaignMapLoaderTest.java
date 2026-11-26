@@ -26,6 +26,19 @@ public class CampaignMapLoaderTest {
 		for (int i = 1; i < 4; i++) assertTrue(players[i].getPlayerType().isAi());
 	}
 
+	@Test public void everyAiProfileIsSelectableWithoutChangingTheHuman() throws Exception {
+		OriginalMapFileContent map = new OriginalMapFileContent(16);
+		map.setPlayerCount(2);
+		map.setPlayer(0, 0, 0, 0, "human");
+		map.setPlayer(1, 1, 1, 1, "computer");
+		for (EPlayerType type : EPlayerType.VALUES_AI_ONLY) {
+			PlayerSetting[] players = CampaignMapLoader.initialState(map, 1L, type).getPlayerSettings();
+			assertSame(EPlayerType.HUMAN, players[0].getPlayerType());
+			assertSame(type, players[1].getPlayerType());
+			assertSame(ECivilisation.EGYPTIAN, players[1].getCivilisation());
+		}
+	}
+
 	@Test(expected = MapLoadException.class) public void unspecifiedNationIsNotRandomizedInCampaign() throws Exception {
 		OriginalMapFileContent map = new OriginalMapFileContent(16);
 		map.setPlayerCount(1);

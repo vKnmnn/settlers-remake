@@ -15,6 +15,7 @@
 package jsettlers.logic.buildings.workers;
 
 import jsettlers.common.buildings.EBuildingType;
+import jsettlers.ai.original.S3DifficultyRules;
 import jsettlers.common.landscape.EResourceType;
 import jsettlers.common.map.shapes.FreeMapArea;
 import jsettlers.common.mapobject.EMapObjectType;
@@ -72,6 +73,8 @@ public final class MineBuilding extends ResourceBuilding {
 		ShortPoint2D randomPosition = blockedPositions[randomPositionIndex].calculatePoint(super.pos);
 
 		boolean resourceTaken = super.grid.tryTakingResource(randomPosition, getProducedResource());
+		resourceTaken = S3DifficultyRules.retainMinedResource(getPlayer().getPlayerType(), resourceTaken,
+				() -> MatchConstants.random().nextInt(65536));
 		super.productivityActionExecuted(resourceTaken);
 		return resourceTaken;
 	}

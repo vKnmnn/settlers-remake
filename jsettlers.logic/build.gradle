@@ -57,3 +57,11 @@ task fourCivilisationsIT(type: Test, dependsOn: testClasses) {
 }
 
 test { exclude 'jsettlers/integration/playthrough/**' }
+
+// Reconstructed AI smoke matches, including save/load and all civilisations.
+task s3AiIT(type: Test, dependsOn: testClasses) {
+    include '**/S3AiIT*'
+    maxParallelForks = 1
+    maxHeapSize = '4G'
+    testLogging { showStandardStreams = true }
+}

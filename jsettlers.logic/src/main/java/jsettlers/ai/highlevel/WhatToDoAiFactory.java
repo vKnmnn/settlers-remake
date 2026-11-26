@@ -18,6 +18,7 @@ import jsettlers.ai.army.ArmyGeneral;
 import jsettlers.ai.army.ModularGeneral;
 import jsettlers.ai.economy.BuildingListEconomyMinister;
 import jsettlers.ai.economy.EconomyMinister;
+import jsettlers.ai.economy.S3EconomyMinister;
 import jsettlers.common.ai.EPlayerType;
 import jsettlers.common.player.ECivilisation;
 import jsettlers.logic.map.grid.MainGrid;
@@ -37,6 +38,7 @@ class WhatToDoAiFactory {
 	}
 
 	private EconomyMinister determineMinister(EPlayerType type, ECivilisation civilisation, AiStatistics aiStatistics, Player player) {
+		if (type.isS3Reconstruction()) return new S3EconomyMinister(aiStatistics, player);
 		switch (type) {
 		case AI_VERY_EASY:
 			return new BuildingListEconomyMinister(aiStatistics, player, 1F / 10F, 1F / 5F, true);
@@ -50,6 +52,7 @@ class WhatToDoAiFactory {
 	}
 
 	private ArmyGeneral determineArmyGeneral(EPlayerType playerType, ECivilisation civilisation, AiStatistics aiStatistics, Player player, MovableGrid movableGrid, ITaskScheduler taskScheduler) {
+		if (playerType.isS3Reconstruction()) return ModularGeneral.createS3General(aiStatistics, player, movableGrid, taskScheduler);
 		// TODO: use civilisation to determine different general when there is more than ROMAN
 		return ModularGeneral.createDefaultGeneral(aiStatistics, player, movableGrid, taskScheduler);
 	}

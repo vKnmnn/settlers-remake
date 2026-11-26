@@ -390,6 +390,9 @@ class WhatToDoAi implements IWhatToDoAi {
 	}
 
 	private boolean buildingDependenciesAreFulfilled(EBuildingType targetBuilding) {
+		if (economyMinister instanceof jsettlers.ai.economy.S3EconomyMinister && (targetBuilding == SAWMILL || targetBuilding == FORESTER)) {
+			return true; // S3EconomyMinister applies the reconstructed ratios.
+		}
 		switch (targetBuilding) {
 		case IRONMINE:
 			return ratioFits(COALMINE, COAL_MINE_TO_IRON_MINE_RATIO, IRONMINE);

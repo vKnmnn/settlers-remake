@@ -1,6 +1,7 @@
 package jsettlers.logic.movable.other;
 
 import jsettlers.algorithms.simplebehaviortree.Root;
+import jsettlers.ai.original.S3DifficultyRules;
 import jsettlers.common.menu.messages.SimpleMessage;
 import jsettlers.common.movable.EEffectType;
 import jsettlers.common.movable.EMovableType;
@@ -28,6 +29,7 @@ public class AttackableMovable extends Movable implements IAttackableMovable {
 		if (!isAlive()) return;
 		if(hasEffect(EEffectType.SHIELDED)) hitStrength *= EEffectType.SHIELDED_DAMAGE_FACTOR;
 
+		hitStrength = S3DifficultyRules.incomingDamage(player.getPlayerType(), hitStrength);
 		this.health -= hitStrength;
 		if (health <= 0) {
 			if (attackingPlayer instanceof Player && attackingPlayer.getTeamId() != player.getTeamId()) {

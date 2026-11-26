@@ -22,7 +22,10 @@ public enum EPlayerType {
 	AI_EASY,
 	AI_HARD,
 	AI_VERY_HARD,
-	HUMAN;
+	HUMAN,
+	// Append only: ordinals are part of network/savegame player settings.
+	AI_S3_NORMAL,
+	AI_S3_EASY;
 
 	public static final EPlayerType[] VALUES = EPlayerType.values();
 
@@ -31,20 +34,28 @@ public enum EPlayerType {
 			AI_VERY_HARD,
 			AI_HARD,
 			AI_EASY,
-			AI_VERY_EASY
+			AI_VERY_EASY,
+			AI_S3_NORMAL,
+			AI_S3_EASY
 	};
 
 	public static final EPlayerType[] VALUES_AI_ONLY = new EPlayerType[] {
 			AI_VERY_HARD,
 			AI_HARD,
 			AI_EASY,
-			AI_VERY_EASY
+			AI_VERY_EASY,
+			AI_S3_NORMAL,
+			AI_S3_EASY
 	};
 
 	public static final int NUMBER_OF_PLAYER_TYPES = VALUES.length;
 
 	public static EPlayerType getTypeByIndex(int index) {
 		return VALUES[index % NUMBER_OF_PLAYER_TYPES];
+	}
+
+	public boolean isS3Reconstruction() {
+		return this == AI_S3_NORMAL || this == AI_S3_EASY;
 	}
 
 	public boolean isAi() {

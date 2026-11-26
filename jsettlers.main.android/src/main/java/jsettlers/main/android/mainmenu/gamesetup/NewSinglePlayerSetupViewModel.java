@@ -76,7 +76,9 @@ public class NewSinglePlayerSetupViewModel extends MapSetupViewModel {
 				new PlayerType(EPlayerType.AI_VERY_HARD),
 				new PlayerType(EPlayerType.AI_HARD),
 				new PlayerType(EPlayerType.AI_EASY),
-				new PlayerType(EPlayerType.AI_VERY_EASY)
+				new PlayerType(EPlayerType.AI_VERY_EASY),
+				new PlayerType(EPlayerType.AI_S3_NORMAL),
+				new PlayerType(EPlayerType.AI_S3_EASY)
 		});
 		humanPlayerSlot.setPlayerType(new PlayerType(EPlayerType.HUMAN));
 	}

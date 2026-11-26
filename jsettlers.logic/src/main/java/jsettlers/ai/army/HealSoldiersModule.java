@@ -22,7 +22,8 @@ public class HealSoldiersModule extends ArmyModule {
 
 	public HealSoldiersModule(ArmyFramework parent) {
 		super(parent);
-		this.healPropFactor = HEALING_PROP_FACTOR[parent.getPlayer().getPlayerType().ordinal()];
+		this.healPropFactor = parent.getPlayer().getPlayerType().isS3Reconstruction() ? 1F
+				: HEALING_PROP_FACTOR[parent.getPlayer().getPlayerType().ordinal()];
 		hospitalWorkRadius = EBuildingType.HOSPITAL.getVariant(parent.getPlayer().getCivilisation()).getWorkRadius();
 
 		// setup woundedSoldiers

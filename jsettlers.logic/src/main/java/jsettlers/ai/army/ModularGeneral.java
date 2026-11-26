@@ -39,6 +39,12 @@ public class ModularGeneral extends ArmyFramework implements ArmyGeneral {
 			RegroupArmyModule::new);
 	}
 
+	public static ArmyGeneral createS3General(AiStatistics aiStatistics, Player player, MovableGrid movableGrid, ITaskScheduler taskScheduler) {
+		return createGeneral(aiStatistics, player, movableGrid, taskScheduler,
+			MountTowerModule::new, SoldierProductionModule::new, UpgradeSoldiersModule::new,
+			HealSoldiersModule::new, SimpleDefenseStrategy::new, S3AttackStrategy::new, RegroupArmyModule::new);
+	}
+
 	@SafeVarargs
 	public static ArmyGeneral createGeneral(AiStatistics aiStatistics, Player player, MovableGrid movableGrid, ITaskScheduler taskScheduler, Consumer<ArmyFramework>... modules) {
 		ModularGeneral general = new ModularGeneral(aiStatistics, player, movableGrid, taskScheduler);
