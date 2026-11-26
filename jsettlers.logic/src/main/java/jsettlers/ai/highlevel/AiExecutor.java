@@ -86,11 +86,7 @@ public class AiExecutor implements INetworkTimerable {
 	public void timerEvent() {
 		// every second
 		applyLightRulesStopWatch.restart();
-		try {
-			statisticsUpdaterPool.invokeAll(lightWhatToDoAis);
-		} catch (InterruptedException e) {
-			e.printStackTrace();
-		}
+		applyRulesInPlayerOrder(lightWhatToDoAis);
 		applyLightRulesStopWatch.stop("computerplayer:applyLightRules()");
 
 		// every ten seconds
@@ -100,12 +96,24 @@ public class AiExecutor implements INetworkTimerable {
 			updateStatisticsStopWatch.stop("computerplayer:updateStatistics()");
 
 			applyHeavyRulesStopWatch.restart();
+			applyRulesInPlayerOrder(heavyWhatToDoAis);
+			applyHeavyRulesStopWatch.stop("computerplayer:applyHeavyRules()");
+		}
+	}
+
+	/** Decisions share the saved AI random stream and must consume it in player order. */
+	static void applyRulesInPlayerOrder(List<Callable<Void>> rules) {
+		for (Callable<Void> rule : rules) {
 			try {
-				statisticsUpdaterPool.invokeAll(heavyWhatToDoAis);
+				rule.call();
 			} catch (InterruptedException e) {
+				Thread.currentThread().interrupt();
+				return;
+			} catch (Exception e) {
+				// invokeAll previously hid these failures inside unobserved Futures.
+				System.err.println("Computer player decision failed:");
 				e.printStackTrace();
 			}
-			applyHeavyRulesStopWatch.stop("computerplayer:applyHeavyRules()");
 		}
 	}
 
