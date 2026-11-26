@@ -152,7 +152,7 @@ public class MultiplayerGame {
 					if(iAmTheHost) {
 						playerSetting = new PlayerSetting(slot.getType(), slot.getCivilisation(), slot.getTeam());
 					} else {
-						playerSetting = new PlayerSetting(EPlayerType.HUMAN, slot.getCivilisation(), slot.getTeam());
+						playerSetting = new PlayerSetting(slot.getType(), slot.getCivilisation(), slot.getTeam()).withoutAiExecution();
 					}
 
 					return Map.entry(slot.getPosition(), playerSetting);

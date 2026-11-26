@@ -44,7 +44,9 @@ public class InitialGameStateRulesTest {
 		assertEquals(ECivilisation.AMAZON, restored.getPlayerSettings()[0].getCivilisation());
 		InitialGameState replay = restored.clone();
 		assertEquals(rules, replay.getMatchRules());
-		assertEquals(EPlayerType.HUMAN, replay.getPlayerSettings()[0].getPlayerType());
+		assertEquals(EPlayerType.AI_HARD, replay.getPlayerSettings()[0].getPlayerType());
+		org.junit.Assert.assertFalse(replay.getPlayerSettings()[0].shouldRunAi());
+		org.junit.Assert.assertTrue(restored.getPlayerSettings()[0].shouldRunAi());
 		assertEquals(EMapStartResources.MAP_DEFAULT, replay.getStartResources());
 	}
 

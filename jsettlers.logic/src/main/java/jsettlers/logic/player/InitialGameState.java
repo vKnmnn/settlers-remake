@@ -1,6 +1,5 @@
 package jsettlers.logic.player;
 
-import jsettlers.common.ai.EPlayerType;
 import jsettlers.logic.map.loading.EMapStartResources;
 
 import java.io.DataInputStream;
@@ -83,7 +82,7 @@ public class InitialGameState implements Cloneable, Serializable {
 		PlayerSetting[] playerSettings = new PlayerSetting[this.playerSettings.length];
 		for (int i = 0; i < playerSettings.length; i++) {
 			PlayerSetting originalSetting = this.playerSettings[i];
-			playerSettings[i] = new PlayerSetting(originalSetting.isAvailable(), EPlayerType.HUMAN, originalSetting.getCivilisation(), originalSetting.getTeamId());
+			playerSettings[i] = originalSetting.withoutAiExecution();
 		}
 		return playerSettings;
 	}

@@ -59,7 +59,7 @@ public class AiExecutor implements INetworkTimerable {
 		WhatToDoAiFactory aiFactory = new WhatToDoAiFactory();
 		for (byte playerId = 0; playerId < playerSettings.length; playerId++) {
 			PlayerSetting playerSetting = playerSettings[playerId];
-			if (playerSetting.isAvailable() && playerSetting.getPlayerType().isAi()) {
+			if (playerSetting.shouldRunAi()) {
 				IWhatToDoAi whatToDoAi = aiFactory.buildWhatToDoAi(
 						playerSettings[playerId].getPlayerType(),
 						playerSettings[playerId].getCivilisation(),

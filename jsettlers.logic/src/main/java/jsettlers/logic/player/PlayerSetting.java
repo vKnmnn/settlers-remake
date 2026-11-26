@@ -38,6 +38,8 @@ public class PlayerSetting {
 	private final Byte teamId;
 	private final ECivilisation civilisation;
 	private final EPlayerType playerType;
+	// Local execution policy, deliberately excluded from saved/wire settings.
+	private boolean externalAiCommands;
 
 	/**
 	 * Creates a new {@link PlayerSetting} object for a human player.
@@ -88,6 +90,17 @@ public class PlayerSetting {
 
 	public EPlayerType getPlayerType() {
 		return playerType;
+	}
+
+	/** Preserve simulation rules while commands come from the host or replay. */
+	public PlayerSetting withoutAiExecution() {
+		PlayerSetting copy = new PlayerSetting(available, playerType, civilisation, teamId);
+		copy.externalAiCommands = true;
+		return copy;
+	}
+
+	public boolean shouldRunAi() {
+		return available && playerType != null && playerType.isAi() && !externalAiCommands;
 	}
 
 	public ECivilisation getCivilisation() {
@@ -145,6 +158,8 @@ public class PlayerSetting {
 	public static PlayerSetting[] createDefaultSettings(byte playerId, byte maxPlayers) {
 		PlayerSetting[] playerSettings = new PlayerSetting[maxPlayers];
 
+		// Keep automatic defaults stable; reconstructed AI variants require explicit selection.
+		EPlayerType[] defaults = {EPlayerType.AI_VERY_EASY, EPlayerType.AI_EASY, EPlayerType.AI_HARD, EPlayerType.AI_VERY_HARD, EPlayerType.HUMAN};
 		byte offsetToSkipHuman = 0;
 		for (byte i = 0; i < playerSettings.length; i++) {
 			if (i == playerId) {
@@ -152,10 +167,10 @@ public class PlayerSetting {
 			} else {
 				EPlayerType aiType;
 
-				aiType = EPlayerType.getTypeByIndex(i + offsetToSkipHuman);
+				aiType = defaults[(i + offsetToSkipHuman) % defaults.length];
 				if (aiType == EPlayerType.HUMAN) {
 					offsetToSkipHuman++;
-					aiType = EPlayerType.getTypeByIndex(i + offsetToSkipHuman);
+					aiType = defaults[(i + offsetToSkipHuman) % defaults.length];
 				}
 				playerSettings[i] = new PlayerSetting(true, aiType, ECivilisation.ROMAN, i);
 			}
